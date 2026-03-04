@@ -58,7 +58,18 @@ namespace SeagullStorm
             // Load cloud save
             string json = await HorizonManager.Instance.LoadCloudData();
             if (!string.IsNullOrEmpty(json))
-                GameManager.Instance.Save = JsonUtility.FromJson<SaveData>(json);
+            {
+                try
+                {
+                    GameManager.Instance.Save = JsonUtility.FromJson<SaveData>(json);
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"Cloud save JSON parse failed, using defaults: {ex.Message}");
+                    HorizonManager.Instance?.RecordException(ex);
+                    GameManager.Instance.Save = SaveData.CreateDefault();
+                }
+            }
             else
                 GameManager.Instance.Save = SaveData.CreateDefault();
 
