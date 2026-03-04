@@ -12,6 +12,8 @@ namespace SeagullStorm
         public float playerHP;
         public float playerMaxHP;
         public Vector2 playerPosition;
+        public float moveSpeedMultiplier = 1f;
+        public float pickupRadiusMultiplier = 1f;
         public List<string> activeWeapons = new List<string>();
         public int kills;
         public int xpCollected;
@@ -29,6 +31,8 @@ namespace SeagullStorm
             playerHP = maxHP;
             playerMaxHP = maxHP;
             playerPosition = Vector2.zero;
+            moveSpeedMultiplier = 1f;
+            pickupRadiusMultiplier = 1f;
             activeWeapons.Clear();
             activeWeapons.Add("feather");
             kills = 0;

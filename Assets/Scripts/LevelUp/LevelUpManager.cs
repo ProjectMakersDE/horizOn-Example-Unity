@@ -143,6 +143,12 @@ namespace SeagullStorm
                     run.playerMaxHP += 20f;
                     run.playerHP = Mathf.Min(run.playerHP + 20f, run.playerMaxHP);
                     break;
+                case "move_speed":
+                    run.moveSpeedMultiplier += 0.1f;
+                    break;
+                case "xp_magnet":
+                    run.pickupRadiusMultiplier += 0.25f;
+                    break;
             }
         }
     }

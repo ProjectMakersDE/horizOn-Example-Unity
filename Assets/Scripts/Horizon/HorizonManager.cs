@@ -52,6 +52,20 @@ namespace SeagullStorm
             return result;
         }
 
+        public async Task<bool> SignInGoogle(string googleAuthorizationCode, string redirectUri = "")
+        {
+            bool result = await UserManager.Instance.SignInGoogle(googleAuthorizationCode, redirectUri);
+            if (result) CrashManager.Instance.SetUserId(GetUserId());
+            return result;
+        }
+
+        public async Task<bool> SignUpGoogle(string googleAuthorizationCode, string redirectUri = "", string name = null)
+        {
+            bool result = await UserManager.Instance.SignUpGoogle(googleAuthorizationCode, redirectUri, name);
+            if (result) CrashManager.Instance.SetUserId(GetUserId());
+            return result;
+        }
+
         public async Task<bool> RestoreSession()
         {
             bool result = await UserManager.Instance.RestoreAnonymousSession();
@@ -66,9 +80,17 @@ namespace SeagullStorm
 
         // ===== Remote Config =====
 
-        public async Task<Dictionary<string, string>> LoadAllConfigs()
+        private Dictionary<string, string> _cachedConfigs;
+
+        public async Task<Dictionary<string, string>> LoadAllConfigs(bool useCache = true)
         {
-            return await RemoteConfigManager.Instance.GetAllConfigs(useCache: false);
+            if (useCache && _cachedConfigs != null)
+                return _cachedConfigs;
+
+            var result = await RemoteConfigManager.Instance.GetAllConfigs(useCache: false);
+            if (result != null)
+                _cachedConfigs = result;
+            return result;
         }
 
         // ===== Cloud Save =====
@@ -121,9 +143,9 @@ namespace SeagullStorm
 
         // ===== Feedback =====
 
-        public async Task<bool> SubmitFeedback(string title, string msg, string category)
+        public async Task<bool> SubmitFeedback(string title, string msg, string category, string email = null)
         {
-            return await FeedbackManager.Instance.Submit(title, category, msg);
+            return await FeedbackManager.Instance.Submit(title, category, msg, email, includeDeviceInfo: true);
         }
 
         // ===== User Logs =====

@@ -38,6 +38,8 @@ namespace SeagullStorm
         [Header("Settings Button")]
         [SerializeField] private Button settingsButton;
 
+        public static List<UserNewsResponse> CachedNews { get; private set; }
+
         private async void OnEnable()
         {
             AudioManager.Instance?.PlayMenuMusic();
@@ -49,7 +51,7 @@ namespace SeagullStorm
                 GameManager.Instance.OnSaveDataChanged += RefreshUI;
 
             // Load remote config
-            var configs = await HorizonManager.Instance.LoadAllConfigs();
+            var configs = await HorizonManager.Instance.LoadAllConfigs(useCache: true);
             if (configs != null)
                 GameManager.Instance.Config = GameConfig.Parse(configs);
 
@@ -129,6 +131,7 @@ namespace SeagullStorm
         private async System.Threading.Tasks.Task LoadNews()
         {
             var news = await HorizonManager.Instance.LoadNews();
+            CachedNews = news;
             if (news == null || newsContainer == null || newsEntryPrefab == null) return;
 
             foreach (Transform child in newsContainer) Destroy(child.gameObject);

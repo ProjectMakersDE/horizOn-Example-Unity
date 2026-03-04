@@ -33,6 +33,7 @@ namespace SeagullStorm
         public event Action OnSaveDataChanged;
 
         private int _consecutiveWave1Deaths;
+        public bool ScoreSubmitted { get; private set; }
 
         private void Awake()
         {
@@ -95,6 +96,12 @@ namespace SeagullStorm
             // Reset player position
             if (player != null) player.transform.position = Vector3.zero;
 
+            // Clear old weapons and initialize default
+            WeaponManager.Instance?.ClearWeapons();
+            WeaponManager.Instance?.InitializeDefaultWeapon(player);
+
+            ScoreSubmitted = false;
+
             ChangeState(GameState.Run);
             AudioManager.Instance?.PlayBattleMusic();
         }
@@ -128,6 +135,7 @@ namespace SeagullStorm
 
             // Submit score
             try { await HorizonManager.Instance.SubmitScore(run.score); } catch { }
+            ScoreSubmitted = true;
 
             // Save cloud data
             try

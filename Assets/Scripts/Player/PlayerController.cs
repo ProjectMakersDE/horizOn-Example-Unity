@@ -44,7 +44,7 @@ namespace SeagullStorm
         {
             if (GameManager.Instance == null || GameManager.Instance.CurrentState != GameState.Run) return;
 
-            float speedMult = GameManager.Instance.GetSpeedMultiplier();
+            float speedMult = GameManager.Instance.GetSpeedMultiplier() * GameManager.Instance.RunState.moveSpeedMultiplier;
             Vector2 velocity = _moveInput.normalized * _baseSpeed * speedMult * Time.fixedDeltaTime;
             _rb.MovePosition(_rb.position + velocity);
             GameManager.Instance.RunState.playerPosition = _rb.position;

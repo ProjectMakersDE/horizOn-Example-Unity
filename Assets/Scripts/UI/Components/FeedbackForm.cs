@@ -12,6 +12,7 @@ namespace SeagullStorm
         [SerializeField] private TMP_InputField titleInput;
         [SerializeField] private TMP_InputField messageInput;
         [SerializeField] private TMP_Dropdown categoryDropdown;
+        [SerializeField] private TMP_InputField emailInput;
         [SerializeField] private Button submitButton;
         [SerializeField] private TMP_Text statusText;
 
@@ -42,6 +43,9 @@ namespace SeagullStorm
                 }
             }
 
+            string email = emailInput != null ? emailInput.text : null;
+            if (string.IsNullOrWhiteSpace(email)) email = null;
+
             if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(msg))
             {
                 SetStatus("Fill in title and message.");
@@ -49,7 +53,7 @@ namespace SeagullStorm
             }
 
             SetStatus("Sending...");
-            bool success = await HorizonManager.Instance.SubmitFeedback(title, msg, category);
+            bool success = await HorizonManager.Instance.SubmitFeedback(title, msg, category, email);
 
             if (success)
             {

@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -45,6 +46,10 @@ namespace SeagullStorm
 
             if (bestScoreText != null)
                 bestScoreText.text = $"Best: {save.highscore:N0}";
+
+            // Wait for score submission to complete before fetching rank
+            while (GameManager.Instance != null && !GameManager.Instance.ScoreSubmitted)
+                await Task.Yield();
 
             // Fetch rank
             try

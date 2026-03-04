@@ -24,7 +24,7 @@ namespace SeagullStorm
         {
             if (_target == null) return;
 
-            float pickupRadius = GameManager.Instance?.GetPickupRadius() ?? 50f;
+            float pickupRadius = (GameManager.Instance?.GetPickupRadius() ?? 50f) * (GameManager.Instance?.RunState?.pickupRadiusMultiplier ?? 1f);
             float dist = Vector2.Distance(transform.position, _target.position);
 
             if (dist < pickupRadius)

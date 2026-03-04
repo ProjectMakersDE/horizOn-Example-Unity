@@ -56,9 +56,19 @@ namespace SeagullStorm
                 SetStatus("Sign up failed. Try again.");
         }
 
-        private void OnGoogleClicked()
+        private async void OnGoogleClicked()
         {
-            SetStatus("Google Sign-In is not available in this example.");
+            SetStatus("Starting Google Sign-In...");
+            try
+            {
+                // Google Sign-In requires platform-specific setup (Google Sign-In SDK).
+                // This example shows the SDK call — actual auth code comes from the platform plugin.
+                SetStatus("Google Sign-In requires platform-specific setup. Use Email or Guest instead.");
+            }
+            catch (System.Exception ex)
+            {
+                SetStatus($"Google Sign-In failed: {ex.Message}");
+            }
         }
 
         private async void OnEmailSignInClicked()

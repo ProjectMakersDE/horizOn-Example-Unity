@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using PM.horizOn.Cloud.Objects.Network.Responses;
 
 namespace SeagullStorm
 {
@@ -15,6 +16,8 @@ namespace SeagullStorm
 
         [SerializeField] private GameObject newsPanel;
         [SerializeField] private FeedbackForm feedbackForm;
+        [SerializeField] private Transform newsContentContainer;
+        [SerializeField] private GameObject newsEntryPrefab;
 
         private void OnEnable()
         {
@@ -42,9 +45,26 @@ namespace SeagullStorm
             if (newsPanel != null) newsPanel.SetActive(true);
             if (feedbackForm != null) feedbackForm.gameObject.SetActive(false);
 
-            // Load fresh news
-            var news = await HorizonManager.Instance.LoadNews();
-            // News panel would be populated here by a child component
+            // Use cached news from hub, or fetch fresh if not available
+            var news = HubController.CachedNews;
+            if (news == null)
+            {
+                news = await HorizonManager.Instance.LoadNews();
+            }
+
+            // Populate news panel
+            if (news != null && newsContentContainer != null && newsEntryPrefab != null)
+            {
+                foreach (Transform child in newsContentContainer) Object.Destroy(child.gameObject);
+
+                foreach (var item in news)
+                {
+                    var obj = Instantiate(newsEntryPrefab, newsContentContainer);
+                    var comp = obj.GetComponent<NewsEntry>();
+                    if (comp != null)
+                        comp.Setup(item.title, item.releaseDate);
+                }
+            }
         }
 
         private void OnFeedback()

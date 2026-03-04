@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using PM.horizOn.Cloud.Core;
-using PM.horizOn.Cloud.Manager;
 
 namespace SeagullStorm
 {
@@ -33,14 +32,13 @@ namespace SeagullStorm
                 return;
             }
 
-            // Start crash capture
-            CrashManager.Instance.StartCapture();
+            // Start crash capture via facade
+            HorizonManager.Instance.StartCrashCapture();
 
             // Attempt session restore
-            bool restored = await UserManager.Instance.RestoreAnonymousSession();
+            bool restored = await HorizonManager.Instance.RestoreSession();
             if (restored)
             {
-                CrashManager.Instance.SetUserId(UserManager.Instance.CurrentUser?.UserId ?? "");
                 SceneManager.LoadScene("GameScene");
             }
             else
