@@ -49,6 +49,7 @@ namespace SeagullStorm
             {
                 weapon.weaponId = weaponId;
                 _weapons[weaponId] = weapon;
+                GameManager.Instance?.RunState.activeWeapons.Add(weaponId);
             }
         }
 

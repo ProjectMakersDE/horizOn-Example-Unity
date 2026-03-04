@@ -48,5 +48,11 @@ namespace SeagullStorm
         {
             _pool?.Release(p);
         }
+
+        public void ReturnAll()
+        {
+            foreach (Transform child in transform)
+                child.gameObject.SetActive(false);
+        }
     }
 }

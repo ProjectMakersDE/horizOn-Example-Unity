@@ -68,7 +68,13 @@ namespace SeagullStorm
 
         public async Task<bool> RestoreSession()
         {
-            bool result = await UserManager.Instance.RestoreAnonymousSession();
+            // Try general session restore (works for email, Google, any auth type)
+            bool result = await UserManager.Instance.CheckAuth();
+            if (!result)
+            {
+                // Fall back to anonymous session restore
+                result = await UserManager.Instance.RestoreAnonymousSession();
+            }
             if (result) CrashManager.Instance.SetUserId(GetUserId());
             return result;
         }

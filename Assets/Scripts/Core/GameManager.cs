@@ -102,6 +102,11 @@ namespace SeagullStorm
 
             ScoreSubmitted = false;
 
+            EnemyPool.Instance?.ReturnAll();
+            PickupPool.Instance?.ReturnAll();
+            ProjectilePool.Instance?.ReturnAll();
+            SpawnManager.Instance?.ResetForNewRun();
+
             ChangeState(GameState.Run);
             AudioManager.Instance?.PlayBattleMusic();
         }
@@ -124,7 +129,7 @@ namespace SeagullStorm
                 {
                     try { await HorizonManager.Instance.LogWarning(
                         "Player died in wave 1 three consecutive times - possible balancing issue"); }
-                    catch { }
+                    catch (System.Exception ex) { HorizonManager.Instance?.RecordException(ex); }
                     _consecutiveWave1Deaths = 0;
                 }
             }
@@ -134,7 +139,7 @@ namespace SeagullStorm
             }
 
             // Submit score
-            try { await HorizonManager.Instance.SubmitScore(run.score); } catch { }
+            try { await HorizonManager.Instance.SubmitScore(run.score); } catch (System.Exception ex) { HorizonManager.Instance?.RecordException(ex); }
             ScoreSubmitted = true;
 
             // Save cloud data
@@ -143,7 +148,7 @@ namespace SeagullStorm
                 string json = JsonUtility.ToJson(Save);
                 await HorizonManager.Instance.SaveCloudData(json);
             }
-            catch { }
+            catch (System.Exception ex) { HorizonManager.Instance?.RecordException(ex); }
 
             // Log run
             try
@@ -154,7 +159,7 @@ namespace SeagullStorm
                              $"Coins earned: {run.coinsEarned}";
                 await HorizonManager.Instance.LogRunEnd(msg);
             }
-            catch { }
+            catch (System.Exception ex) { HorizonManager.Instance?.RecordException(ex); }
 
             OnSaveDataChanged?.Invoke();
         }

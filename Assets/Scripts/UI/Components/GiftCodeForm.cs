@@ -62,7 +62,7 @@ namespace SeagullStorm
                         if (reward != null && save != null)
                             save.coins += reward.coins;
                     }
-                    catch { }
+                    catch (System.Exception ex) { HorizonManager.Instance?.RecordException(ex); }
                 }
 
                 SetStatus("Redeemed!");

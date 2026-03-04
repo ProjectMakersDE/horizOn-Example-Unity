@@ -55,8 +55,13 @@ namespace SeagullStorm
             try
             {
                 var rank = await HorizonManager.Instance.GetRank();
-                if (rank != null && rankText != null)
-                    rankText.text = $"Your Rank: #{rank.position}";
+                if (rank != null)
+                {
+                    if (rankText != null)
+                        rankText.text = $"Your Rank: #{rank.position}";
+                    if (bestScoreText != null)
+                        bestScoreText.text = $"Best: {save.highscore:N0} (#{rank.position})";
+                }
             }
             catch
             {

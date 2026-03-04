@@ -67,7 +67,17 @@ namespace SeagullStorm
 
         // Levelup
         public int LevelupChoices = 3;
-        public List<LevelupPoolEntry> LevelupPool = new List<LevelupPoolEntry>();
+        public List<LevelupPoolEntry> LevelupPool = new List<LevelupPoolEntry>
+        {
+            new LevelupPoolEntry { id = "feather_dmg", type = "weapon_upgrade", weight = 3 },
+            new LevelupPoolEntry { id = "feather_speed", type = "weapon_upgrade", weight = 2 },
+            new LevelupPoolEntry { id = "screech_new", type = "weapon_new", weight = 1 },
+            new LevelupPoolEntry { id = "dive_new", type = "weapon_new", weight = 1 },
+            new LevelupPoolEntry { id = "gust_new", type = "weapon_new", weight = 1 },
+            new LevelupPoolEntry { id = "move_speed", type = "stat_boost", weight = 2 },
+            new LevelupPoolEntry { id = "max_hp", type = "stat_boost", weight = 2 },
+            new LevelupPoolEntry { id = "xp_magnet", type = "stat_boost", weight = 2 },
+        };
 
         public static GameConfig Parse(Dictionary<string, string> configs)
         {
@@ -130,7 +140,7 @@ namespace SeagullStorm
                     if (wrapper?.items != null)
                         c.LevelupPool = new List<LevelupPoolEntry>(wrapper.items);
                 }
-                catch { }
+                catch (System.Exception ex) { Debug.LogWarning($"Config parse error for levelup_pool: {ex.Message}"); }
             }
 
             return c;
@@ -165,7 +175,7 @@ namespace SeagullStorm
                     var wrapper = JsonUtility.FromJson<IntArrayWrapper>("{\"items\":" + s + "}");
                     if (wrapper?.items != null) value = wrapper.items;
                 }
-                catch { }
+                catch (System.Exception ex) { Debug.LogWarning($"Config parse error for key: {ex.Message}"); }
             }
         }
 
@@ -178,7 +188,7 @@ namespace SeagullStorm
                     var wrapper = JsonUtility.FromJson<FloatArrayWrapper>("{\"items\":" + s + "}");
                     if (wrapper?.items != null) value = wrapper.items;
                 }
-                catch { }
+                catch (System.Exception ex) { Debug.LogWarning($"Config parse error for key: {ex.Message}"); }
             }
         }
 

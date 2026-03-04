@@ -23,6 +23,12 @@ namespace SeagullStorm
             _bossSpawned = false;
         }
 
+        public void ResetForNewRun()
+        {
+            _waveTimer = 0f;
+            _bossSpawned = false;
+        }
+
         private void Update()
         {
             if (GameManager.Instance == null || GameManager.Instance.CurrentState != GameState.Run) return;
