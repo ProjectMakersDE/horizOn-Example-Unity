@@ -15,6 +15,7 @@ namespace SeagullStorm
         {
             if (!IsAlive || _target == null) return;
 
+            _damageCooldown -= Time.deltaTime;
             _strafeTimer -= Time.deltaTime;
             if (_strafeTimer <= 0f)
             {

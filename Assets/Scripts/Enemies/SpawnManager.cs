@@ -33,7 +33,7 @@ namespace SeagullStorm
             // Update timer
             run.timeRemaining -= Time.deltaTime;
             run.duration += Time.deltaTime;
-            run.score = run.kills * 10 + run.xpCollected + Mathf.RoundToInt(run.duration * 2f);
+            run.score = run.kills + run.xpCollected + Mathf.RoundToInt(run.duration);
 
             // Update crash keys
             HorizonManager.Instance?.SetCrashCustomKey("wave", run.wave.ToString());

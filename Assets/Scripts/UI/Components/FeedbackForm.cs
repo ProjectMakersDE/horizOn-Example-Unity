@@ -33,9 +33,13 @@ namespace SeagullStorm
 
             if (categoryDropdown != null)
             {
-                var options = categoryDropdown.options;
-                if (categoryDropdown.value < options.Count)
-                    category = options[categoryDropdown.value].text;
+                int idx = categoryDropdown.value;
+                switch (idx)
+                {
+                    case 0: category = "BUG"; break;
+                    case 1: category = "FEATURE_REQUEST"; break;
+                    default: category = "GENERAL"; break;
+                }
             }
 
             if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(msg))

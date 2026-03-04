@@ -135,7 +135,7 @@ namespace SeagullStorm
 
         private IEnumerator TrackClipDuration(float duration, System.Action onDone)
         {
-            yield return new WaitForSeconds(duration);
+            yield return new WaitForSecondsRealtime(duration);
             onDone?.Invoke();
         }
     }

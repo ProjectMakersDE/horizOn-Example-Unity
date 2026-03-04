@@ -17,7 +17,7 @@ namespace SeagullStorm
         protected SpriteRenderer _sprite;
         protected Rigidbody2D _rb;
 
-        private float _damageCooldown;
+        protected float _damageCooldown;
         private const float DamageInterval = 0.5f;
 
         public bool IsAlive => _currentHP > 0;
@@ -72,21 +72,12 @@ namespace SeagullStorm
         protected virtual void Die()
         {
             if (GameManager.Instance != null)
-            {
                 GameManager.Instance.RunState.kills++;
-                GameManager.Instance.RunState.score = CalculateScore();
-            }
 
             // Spawn XP pickup
             PickupPool.Instance?.SpawnXP(transform.position, xpReward);
 
             EnemyPool.Instance?.ReturnEnemy(this);
-        }
-
-        private int CalculateScore()
-        {
-            var run = GameManager.Instance.RunState;
-            return run.kills * 10 + run.xpCollected + Mathf.RoundToInt(run.duration * 2f);
         }
 
         private void OnTriggerStay2D(Collider2D other)
