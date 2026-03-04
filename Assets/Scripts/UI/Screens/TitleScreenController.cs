@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -61,14 +62,39 @@ namespace SeagullStorm
             SetStatus("Starting Google Sign-In...");
             try
             {
-                // Google Sign-In requires platform-specific setup (Google Sign-In SDK).
-                // This example shows the SDK call — actual auth code comes from the platform plugin.
-                SetStatus("Google Sign-In requires platform-specific setup. Use Email or Guest instead.");
+                // In production, obtain the authorization code from a platform-specific
+                // Google Sign-In plugin (e.g. Google Sign-In for Unity).
+                // For this example we attempt the SDK call so the full flow is visible.
+                string authCode = await GetGoogleAuthorizationCode();
+
+                bool success = await HorizonManager.Instance.SignInGoogle(authCode);
+                if (success)
+                {
+                    SceneManager.LoadScene("GameScene");
+                }
+                else
+                {
+                    SetStatus("Google Sign-In failed. Try Email or Guest instead.");
+                }
             }
             catch (System.Exception ex)
             {
-                SetStatus($"Google Sign-In failed: {ex.Message}");
+                // Expected on platforms without Google Sign-In SDK configured.
+                Debug.Log($"Google Sign-In unavailable: {ex.Message}");
+                SetStatus("Google Sign-In requires platform-specific setup. Use Email or Guest instead.");
             }
+        }
+
+        /// <summary>
+        /// Placeholder for platform-specific Google Sign-In.
+        /// Replace this with your actual Google Sign-In plugin call that returns
+        /// an authorization code (e.g. GoogleSignIn.DefaultInstance.SignIn()).
+        /// </summary>
+        private Task<string> GetGoogleAuthorizationCode()
+        {
+            throw new System.PlatformNotSupportedException(
+                "Google Sign-In plugin is not configured. " +
+                "Integrate a platform-specific Google Sign-In SDK and return the authorization code here.");
         }
 
         private async void OnEmailSignInClicked()
