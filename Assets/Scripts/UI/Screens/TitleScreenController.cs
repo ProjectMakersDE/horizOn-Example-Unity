@@ -19,6 +19,7 @@ namespace SeagullStorm
         [Header("Buttons")]
         [SerializeField] private Button guestButton;
         [SerializeField] private Button googleButton;
+        [SerializeField] private Button appleButton;
         [SerializeField] private Button emailSignInButton;
         [SerializeField] private Button createAccountButton;
 
@@ -38,6 +39,7 @@ namespace SeagullStorm
 
             if (guestButton != null) guestButton.onClick.AddListener(OnGuestClicked);
             if (googleButton != null) googleButton.onClick.AddListener(OnGoogleClicked);
+            if (appleButton != null) appleButton.onClick.AddListener(OnAppleClicked);
             if (emailSignInButton != null) emailSignInButton.onClick.AddListener(OnEmailSignInClicked);
             if (createAccountButton != null) createAccountButton.onClick.AddListener(OnCreateAccountClicked);
         }
@@ -95,6 +97,26 @@ namespace SeagullStorm
             throw new System.PlatformNotSupportedException(
                 "Google Sign-In plugin is not configured. " +
                 "Integrate a platform-specific Google Sign-In SDK and return the authorization code here.");
+        }
+
+        private async void OnAppleClicked()
+        {
+            SetStatus("Starting Apple Sign-In...");
+
+            // SignInWithApple opens the native ASAuthorizationController on iOS or a
+            // system-browser OAuth redirect on other platforms (configured via
+            // HorizonConfig.AppleServicesId / AppleRedirectUri). On USER_NOT_FOUND
+            // it transparently falls through to SignUpApple.
+            bool success = await HorizonManager.Instance.SignInWithApple();
+
+            if (success)
+            {
+                SceneManager.LoadScene("GameScene");
+            }
+            else
+            {
+                SetStatus("Apple Sign-In failed. Try Email or Guest instead.");
+            }
         }
 
         private async void OnEmailSignInClicked()

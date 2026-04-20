@@ -66,6 +66,13 @@ namespace SeagullStorm
             return result;
         }
 
+        public async Task<bool> SignInWithApple()
+        {
+            bool result = await UserManager.Instance.SignInWithApple();
+            if (result) CrashManager.Instance.SetUserId(GetUserId());
+            return result;
+        }
+
         public async Task<bool> RestoreSession()
         {
             // Try general session restore (works for email, Google, any auth type)
