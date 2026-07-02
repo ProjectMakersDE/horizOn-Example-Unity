@@ -32,6 +32,14 @@ namespace SeagullStorm
                 return;
             }
 
+            // Ensure the HorizonManager facade exists before any facade call
+            // (BootScene has no HorizonManager GameObject; its Awake registers
+            // the instance and marks it DontDestroyOnLoad).
+            if (HorizonManager.Instance == null)
+            {
+                new GameObject("[HorizonManager]").AddComponent<HorizonManager>();
+            }
+
             // Start crash capture via facade
             HorizonManager.Instance.StartCrashCapture();
 

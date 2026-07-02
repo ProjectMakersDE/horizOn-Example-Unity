@@ -1,7 +1,9 @@
 # horizOn Example — Unity
 
-> **Status: Under Construction**
-> This project is actively being developed. Screenshots and a playable demo will be added soon.
+> **Status: Content complete, pending play test**
+> Scenes, prefabs, sprites, audio, URP 2D pipeline, and all SDK wiring are in place and
+> batch-validated (`SeagullSetup.ValidateSetup`). The remaining manual step is an in-editor play
+> test with a real horizOn API key. Screenshots will be added after that.
 
 **Seagull Storm** is a mini Vampire Survivors-style roguelike built with Unity 6. It serves as a comprehensive example project demonstrating all 9 [horizOn](https://horizon.pm) SDK features in a real, playable game.
 
@@ -33,7 +35,7 @@ You play as a seagull on a beach, surviving waves of crabs, jellyfish, and pirat
 ### Step 1 — Clone and Open
 
 1. Clone this repository
-2. Open the project in **Unity 6** (2025 LTS)
+2. Open the project in **Unity 6000.5** (the project is pinned to 6000.5.0f1)
 
 ### Step 2 — Create a horizOn Account and API Key
 
@@ -44,11 +46,14 @@ You play as a seagull on a beach, surviving waves of crabs, jellyfish, and pirat
 
 ### Step 3 — Import the Config into the SDK
 
-The horizOn SDK is already included in this project under `Assets/HorizonSDK/`.
+The horizOn SDK is already included in this project under
+`Assets/Plugins/ProjectMakers/horizOn/`.
 
-1. In Unity, go to **Tools > horizOn > Import Config**
+1. In Unity, go to **Window > horizOn > Config Importer**
 2. Select the config JSON file you downloaded from the dashboard
-3. The SDK saves the config to `Assets/HorizonSDK/Resources/HorizonConfig.asset`
+3. The SDK saves the config to
+   `Assets/Plugins/ProjectMakers/horizOn/CloudSDK/Resources/horizOn/HorizonConfig.asset`
+   (loaded at runtime from the `horizOn/HorizonConfig` Resources path)
 
 ### Step 4 — Set Up Remote Config (Optional)
 
@@ -154,27 +159,52 @@ Each upgrade type (`speed`, `damage`, `hp`, `magnet`) has three config keys:
 
 ```
 Assets/
-  Fonts/               # Press Start 2P
-  Audio/               # Music and SFX (placeholder)
-  Sprites/             # Sprite sheets (placeholder)
-  HorizonSDK/          # horizOn SDK (auto-updated)
-  Scripts/
-    Core/              # GameManager, AudioManager, ConfigCache
-    Horizon/           # HorizonManager facade, SDK integration
-    Player/            # PlayerController, PlayerHealth
-    Enemies/           # EnemyBase, Crab, Jellyfish, Pirate, Boss
-    Weapons/           # WeaponBase, Feather, Screech, Dive, Gust
-    Spawning/          # WaveSpawner, XPShell, Pickup
-    UI/                # All screen controllers and panels
-    Data/              # GameData, RunState models
+  Art/
+    Sprites/           # Sprite sheets (seagull, enemies, weapons, pickups, tilemap, ui, logo)
+    Fonts/             # Press Start 2P + generated "PressStart2P SDF" TMP font asset
+    Audio/             # Music (3) and SFX (11)
+    Tiles/             # Tile assets generated from tilemap.png (used by the GameScene island)
+  Editor/              # SeagullSetup.cs (batch setup + SerializeField validation)
+  Plugins/
+    ProjectMakers/
+      horizOn/         # horizOn SDK (CloudSDK)
+  Prefabs/
+    Enemies/           # CrabEnemy, JellyfishEnemy, PirateEnemy, BossEnemy
+    Weapons/           # FeatherProjectile
+    Pickups/           # XPShell, PoisonZone
+    UI/                # UpgradeSlot, LeaderboardEntry, NewsEntry, LevelUpChoiceCard
   Scenes/              # BootScene, TitleScene, GameScene
+  Scripts/
+    Bootstrap/         # GameBootstrap (SDK init, session restore)
+    Core/              # GameManager, GameConfig, SaveData, RunState, GameColors
+    Horizon/           # HorizonManager facade (all 9 SDK features)
+    Player/            # PlayerController, PlayerAnimator, PlayerStats
+    Enemies/           # EnemyBase + Crab/Jellyfish/Pirate/Boss, EnemyPool, SpawnManager
+    Weapons/           # WeaponBase + Feather/Screech/Dive/Gust, Projectile(+Pool), WeaponManager
+    Pickups/           # XPPickup, PickupPool
+    LevelUp/           # LevelUpManager, LevelUpChoice
+    Audio/             # AudioManager (crossfade + SFX polyphony)
+    UI/                # Screen controllers and reusable components
+    Camera/            # CameraFollow
+  Settings/            # URP-2D.asset + Renderer2D.asset (URP 2D pipeline)
 Packages/              # Package manifest
-ProjectSettings/       # Unity project settings
+ProjectSettings/       # Unity project settings (pinned to 6000.5.0f1)
 ```
+
+## Batch Validation
+
+`Assets/Editor/SeagullSetup.cs` contains the batch-mode setup used to build the project and a
+validation pass that asserts every SerializeField the game code depends on is wired:
+
+```
+Unity -batchmode -nographics -projectPath . -executeMethod SeagullSetup.ValidateSetup -logFile -
+```
+
+It exits 0 when all checks pass and logs `[VALIDATE] OK` / `[VALIDATE] MISSING` per field.
 
 ## Requirements
 
-- [Unity 6](https://unity.com/) (2025 LTS)
+- [Unity 6](https://unity.com/) (6000.5)
 - [horizOn Account](https://horizon.pm) (free tier works)
 - [horizOn SDK for Unity](https://github.com/ProjectMakersDE/horizOn-SDK-Unity)
 

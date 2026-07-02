@@ -135,7 +135,7 @@ namespace SeagullStorm
                 var obj = Instantiate(leaderboardEntryPrefab, leaderboardContainer);
                 var comp = obj.GetComponent<LeaderboardEntry>();
                 if (comp != null)
-                    comp.Setup(entry.position, entry.username, entry.score);
+                    comp.Setup((int)entry.position, entry.username, entry.score);
             }
         }
 

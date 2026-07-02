@@ -51,8 +51,9 @@ crashlytics-build.properties
 # Packed Addressables
 /[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
 
-# TextMeshPro
-/[Aa]ssets/TextMesh Pro/
+# horizOn user config (holds the personal API key written by Tools > horizOn Config Importer)
+/Assets/Plugins/ProjectMakers/horizOn/CloudSDK/Resources/horizOn/HorizonConfig.asset
+/Assets/Plugins/ProjectMakers/horizOn/CloudSDK/Resources/horizOn/HorizonConfig.asset.meta
 
 # IDE
 .idea/
