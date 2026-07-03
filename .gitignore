@@ -51,7 +51,7 @@ crashlytics-build.properties
 # Packed Addressables
 /[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
 
-# horizOn user config (holds the personal API key written by Tools > horizOn Config Importer)
+# horizOn user config (holds the personal API key written by Window > horizOn > Config Importer)
 /Assets/Plugins/ProjectMakers/horizOn/CloudSDK/Resources/horizOn/HorizonConfig.asset
 /Assets/Plugins/ProjectMakers/horizOn/CloudSDK/Resources/horizOn/HorizonConfig.asset.meta
 
