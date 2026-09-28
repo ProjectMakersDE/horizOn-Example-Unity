@@ -1,11 +1,24 @@
 name: Update SDK
 
+# The SDK is a Unity Package Manager git dependency in Packages/manifest.json.
+# This workflow moves the pinned release tag and the lock file hash to a new
+# SDK release. horizOn-SDK-Unity sends the update-sdk dispatch after a release.
+
 on:
   repository_dispatch:
     types: [update-sdk]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: SDK version, for example 1.8.4 (empty = latest release)
+        required: false
 
 permissions:
   contents: write
+
+env:
+  SDK_REPO: ProjectMakersDE/horizOn-SDK-Unity
+  PACKAGE_NAME: com.projectmakers.horizon
 
 jobs:
   update:
@@ -13,33 +26,84 @@ jobs:
     steps:
       - name: Checkout example project
         uses: actions/checkout@v4
-        with:
-          lfs: true
 
-      - name: Checkout SDK at release tag
-        uses: actions/checkout@v4
-        with:
-          repository: ProjectMakersDE/horizOn-SDK-Unity
-          ref: v${{ github.event.client_payload.version }}
-          path: sdk-source
-          lfs: true
-          token: ${{ secrets.SYNC_TOKEN }}
-
-      - name: Replace SDK files
+      - name: Resolve SDK release
+        id: sdk
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_VERSION: ${{ github.event.client_payload.version || inputs.version }}
         run: |
-          rm -rf "Assets/Plugins/ProjectMakers/horizOn"
-          cp -r "sdk-source/Assets/Plugins/ProjectMakers/horizOn" "Assets/Plugins/ProjectMakers/horizOn"
+          set -euo pipefail
+          VERSION="${REQUESTED_VERSION#v}"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(gh release view -R "$SDK_REPO" --json tagName -q .tagName)
+            VERSION="${VERSION#v}"
+          fi
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid SDK version: $VERSION" >&2
+            exit 1
+          fi
+          REMOTE="https://github.com/${SDK_REPO}.git"
+          HASH=$(git ls-remote "$REMOTE" "refs/tags/v${VERSION}^{}" | cut -f1)
+          if [ -z "$HASH" ]; then
+            HASH=$(git ls-remote "$REMOTE" "refs/tags/v${VERSION}" | cut -f1)
+          fi
+          if [ -z "$HASH" ]; then
+            echo "Tag v${VERSION} not found in ${SDK_REPO}" >&2
+            exit 1
+          fi
+          gh api "repos/${SDK_REPO}/contents/package.json?ref=v${VERSION}" --jq .content \
+            | base64 -d > "$RUNNER_TEMP/sdk-package.json"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
 
-      - name: Cleanup
-        run: rm -rf sdk-source
+      - name: Pin SDK release in the package manifest
+        env:
+          VERSION: ${{ steps.sdk.outputs.version }}
+          HASH: ${{ steps.sdk.outputs.hash }}
+        run: |
+          python3 - <<'EOF'
+          import json
+          import os
+
+          name = os.environ["PACKAGE_NAME"]
+          url = f"https://github.com/{os.environ['SDK_REPO']}.git#v{os.environ['VERSION']}"
+          with open(os.path.join(os.environ["RUNNER_TEMP"], "sdk-package.json")) as f:
+              sdk_dependencies = json.load(f).get("dependencies", {})
+
+          def update(path, change):
+              with open(path) as f:
+                  data = json.load(f)
+              change(data["dependencies"])
+              with open(path, "w") as f:
+                  f.write(json.dumps(data, indent=2) + "\n")
+
+          def manifest(deps):
+              deps[name] = url
+
+          def lock(deps):
+              deps[name] = {
+                  "version": url,
+                  "depth": 0,
+                  "source": "git",
+                  "dependencies": sdk_dependencies,
+                  "hash": os.environ["HASH"],
+              }
+
+          update("Packages/manifest.json", manifest)
+          update("Packages/packages-lock.json", lock)
+          EOF
 
       - name: Commit and push
+        env:
+          VERSION: ${{ steps.sdk.outputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          VERSION="${{ github.event.client_payload.version }}"
-          git add -A
-          git diff --staged --quiet || {
+          git add Packages/manifest.json Packages/packages-lock.json
+          if git diff --staged --quiet; then
+            echo "SDK is already pinned to v${VERSION}"
+          else
             git commit -m "chore(sdk): update horizOn SDK to v${VERSION}"
             git push
-          }
+          fi
