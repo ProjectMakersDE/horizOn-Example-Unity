@@ -1,11 +1,12 @@
 # horizOn Example — Unity
 
-> **Status: Content complete, pending play test**
-> Scenes, prefabs, sprites, audio, URP 2D pipeline, and all SDK wiring are in place and
-> batch-validated (`SeagullSetup.ValidateSetup`). The remaining manual step is an in-editor play
-> test with a real horizOn API key. Screenshots will be added after that.
+> **Status: Content complete, full play test pending**
+> Scenes, prefabs, sprites, audio, URP 2D pipeline and SDK wiring are in place. The project opens
+> and compiles in Unity 6000.5 and passes the batch validation (`SeagullSetup.ValidateSetup`).
+> A full in-editor play test with a real horizOn API key is still pending. Screenshots will be
+> added after that.
 
-**Seagull Storm** is a mini Vampire Survivors-style roguelike built with Unity 6. It serves as a comprehensive example project demonstrating all 9 [horizOn](https://horizon.pm) SDK features in a real, playable game.
+**Seagull Storm** is a mini Vampire Survivors-style roguelike built with Unity 6. It serves as a comprehensive example project demonstrating 9 [horizOn](https://horizon.pm) SDK features in a real, playable game.
 
 ## Features Demonstrated
 
@@ -37,6 +38,11 @@ You play as a seagull on a beach, surviving waves of crabs, jellyfish, and pirat
 1. Clone this repository
 2. Open the project in **Unity 6000.5** (the project is pinned to 6000.5.0f1)
 
+The Unity Package Manager installs the
+[horizOn SDK for Unity](https://github.com/ProjectMakersDE/horizOn-SDK-Unity) (`com.projectmakers.horizon`)
+from Git when the project opens, so Git must be installed. The SDK release is pinned in
+`Packages/manifest.json` and is updated automatically when a new SDK version is released.
+
 ### Step 2 — Create a horizOn Account and API Key
 
 1. Go to [horizon.pm](https://horizon.pm) and create a free account
@@ -46,14 +52,12 @@ You play as a seagull on a beach, surviving waves of crabs, jellyfish, and pirat
 
 ### Step 3 — Import the Config into the SDK
 
-The horizOn SDK is already included in this project under
-`Assets/Plugins/ProjectMakers/horizOn/`.
-
 1. In Unity, go to **Window > horizOn > Config Importer**
 2. Select the config JSON file you downloaded from the dashboard
 3. The SDK saves the config to
    `Assets/Plugins/ProjectMakers/horizOn/CloudSDK/Resources/horizOn/HorizonConfig.asset`
-   (loaded at runtime from the `horizOn/HorizonConfig` Resources path)
+   (loaded at runtime from the `horizOn/HorizonConfig` Resources path). This file holds your
+   API key and is ignored by Git.
 
 ### Step 4 — Set Up Remote Config (Optional)
 
@@ -165,9 +169,6 @@ Assets/
     Audio/             # Music (3) and SFX (11)
     Tiles/             # Tile assets generated from tilemap.png (used by the GameScene island)
   Editor/              # SeagullSetup.cs (batch setup + SerializeField validation)
-  Plugins/
-    ProjectMakers/
-      horizOn/         # horizOn SDK (CloudSDK)
   Prefabs/
     Enemies/           # CrabEnemy, JellyfishEnemy, PirateEnemy, BossEnemy
     Weapons/           # FeatherProjectile
@@ -187,7 +188,7 @@ Assets/
     UI/                # Screen controllers and reusable components
     Camera/            # CameraFollow
   Settings/            # URP-2D.asset + Renderer2D.asset (URP 2D pipeline)
-Packages/              # Package manifest
+Packages/              # Package manifest (horizOn SDK as a Git dependency, pinned to a release tag)
 ProjectSettings/       # Unity project settings (pinned to 6000.5.0f1)
 ```
 
@@ -205,8 +206,9 @@ It exits 0 when all checks pass and logs `[VALIDATE] OK` / `[VALIDATE] MISSING` 
 ## Requirements
 
 - [Unity 6](https://unity.com/) (6000.5)
+- [Git](https://git-scm.com/) (the Package Manager uses it to download the SDK)
 - [horizOn Account](https://horizon.pm) (free tier works)
-- [horizOn SDK for Unity](https://github.com/ProjectMakersDE/horizOn-SDK-Unity)
+- [horizOn SDK for Unity](https://github.com/ProjectMakersDE/horizOn-SDK-Unity) (installed by the Package Manager, see Step 1)
 
 ## Related Projects
 
@@ -216,4 +218,5 @@ It exits 0 when all checks pass and logs `[VALIDATE] OK` / `[VALIDATE] MISSING` 
 
 ## License
 
-MIT
+[MIT](LICENSE). The bundled Press Start 2P font is licensed under the SIL Open Font License 1.1,
+see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
