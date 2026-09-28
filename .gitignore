@@ -51,9 +51,11 @@ crashlytics-build.properties
 # Packed Addressables
 /[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
 
-# horizOn user config (holds the personal API key written by Window > horizOn > Config Importer)
-/Assets/Plugins/ProjectMakers/horizOn/CloudSDK/Resources/horizOn/HorizonConfig.asset
-/Assets/Plugins/ProjectMakers/horizOn/CloudSDK/Resources/horizOn/HorizonConfig.asset.meta
+# horizOn user config. Window > horizOn > Config Importer writes the personal API key to
+# Assets/Plugins/ProjectMakers/horizOn/CloudSDK/Resources/horizOn/HorizonConfig.asset.
+# The SDK itself comes from the Package Manager, so nothing else lives under Assets/Plugins.
+/Assets/Plugins/
+/Assets/Plugins.meta
 
 # IDE
 .idea/
