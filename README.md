@@ -129,12 +129,12 @@ without it the rank line shows the result.
 ### Input Log Format
 
 The log is at most 32 KB (a full run uses a few kilobytes). All numbers are little endian,
-the layout is the same as in the Godot version of the game.
+the layout is the same as in the Godot and Unreal versions of the game.
 
 | Part | Bytes | Content |
 |------|-------|---------|
 | Header | 5 | format version `1` (u8), run seed (u32) |
-| Event | 3 | physics ticks (`FixedUpdate` calls while the run plays, 50 per second at the default fixed timestep; Godot uses 60) since the previous event (u16), event code (u8) |
+| Event | 3 | physics ticks (`FixedUpdate` calls while the run plays, 50 per second at the default fixed timestep; Godot and Unreal use 60) since the previous event (u16), event code (u8) |
 
 Event codes: `0x00` to `0x0F` movement (bit 0 left, bit 1 right, bit 2 up, bit 3 down,
 written only when the direction changes), `0x10` to `0x1F` level-up choice (low 4 bits =
