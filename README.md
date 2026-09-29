@@ -21,6 +21,7 @@
 | 7 | **Feedback** | Bug reports and feature requests from in-game |
 | 8 | **User Logs** | Aggregated run summary logged at game over |
 | 9 | **Crash Reporting** | Session tracking, breadcrumbs, exception capture |
+| + | **Validated Actions** (opt-in) | Run ticket and server seed at run start, input log, validated score submit, rejection reason on the game over screen (see [Validated Actions](#validated-actions)) |
 
 ## About the Game
 
@@ -66,6 +67,78 @@ The game works out of the box with built-in defaults. To customize the game bala
 ### Step 5 — Run
 
 Press **Play** in the Unity editor.
+
+## Validated Actions
+
+Validated Actions lets the server check a run before the score reaches the leaderboard.
+At run start the game asks for a single-use run ticket bound to the leaderboard and seeds
+Unity's random numbers with the server seed. During the run it records a compact input log.
+At game over it submits score, reached wave and the SHA-256 hash of that log. The server
+checks the ticket and your rules (score limits, minimum duration, score per second, stage
+rules) before it writes anything, and asks for the log itself when the run lands in the
+top N. The SDK then uploads the log in the background (`AutoUploadEvidence`).
+
+The SDK calls live in `Assets/Scripts/Horizon/ValidatedActions/` (`ValidatedRunService`,
+`RunInputLog`). `GameManager.StartRun()` and `GameManager.EndRun()` use them through the
+`HorizonManager` facade, and `GameOverController` shows the result.
+
+**Availability.** The folder is its own assembly (`SeagullStorm.ValidatedActions.asmdef`).
+Its version define turns on `HORIZON_VALIDATED_ACTIONS` when the installed
+`com.projectmakers.horizon` package is 1.9.0 or newer, the first SDK release that ships
+Validated Actions (TASK-883). The pinned SDK in `Packages/manifest.json` is bumped
+automatically after that release, so the integration switches itself on. With an older SDK
+the project still compiles and the game submits scores the normal way. To try it earlier
+with an SDK build that already has Validated Actions, add `HORIZON_VALIDATED_ACTIONS` under
+**Project Settings > Player > Scripting Define Symbols**.
+
+### Dashboard Setup
+
+1. **Rules:** open **Validated Actions** in the horizOn Dashboard, pick your API key and
+   set the rules. Seagull Storm's score is kills + collected XP + survived seconds, so a
+   starting point is `minDurationSeconds: 20`, `maxScorePerSecond: 50` and a `maxScore`
+   that fits your balancing. Rules stay on the server and never reach the game.
+2. **Validated-only board:** open **Leaderboards**, edit the board the game uses
+   (`default` unless you set `validated_runs_board`) and turn on **Validated submissions
+   only**. From then on the board refuses normal submits (`VALIDATED_SUBMIT_REQUIRED`).
+3. **Top N evidence:** on the same board set **Evidence top N**, the number of top places
+   that need the input log. Runs that land there upload their log automatically, and you
+   can review them in the dashboard.
+4. **Stages (optional):** the game sends the reached wave as stage key `wave_<n>`
+   (for example `wave_4`). Add stage rules with these keys if you want limits per wave.
+5. **Coins (optional):** to let the server own the coins of a run, add a value `coins` to
+   the rules (for example `"values": {"coins": {"maxPerRun": 1000}}`) and set
+   `validated_runs_send_coins` to `true`.
+
+### Enabling It in the Game
+
+Set these Remote Config keys in the dashboard:
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `validated_runs_enabled` | bool | `false` | Start every run as a validated run. When `false`, the game uses the normal leaderboard submit |
+| `validated_runs_board` | string | `default` | Leaderboard key the run ticket is bound to (the hub shows `default`) |
+| `validated_runs_send_coins` | bool | `false` | Also send the coins of the run as earned value `coins`. Turn on only when your rules define a `coins` value, otherwise the server rejects the run (`UNKNOWN_VALUE_KEY`) |
+
+If the run ticket cannot be issued (for example offline or `RUN_RATE_LIMITED`), the run
+still starts and the score is submitted the normal way. A rejected validated run does not
+fall back: the game over screen shows a short reason instead of the rank, for example
+"Not ranked: that run was too short to count", and the error code is logged to the
+console. `GameOverController` has an optional `validationText` field for a separate line;
+without it the rank line shows the result.
+
+### Input Log Format
+
+The log is at most 32 KB (a full run uses a few kilobytes). All numbers are little endian,
+the layout is the same as in the Godot version of the game.
+
+| Part | Bytes | Content |
+|------|-------|---------|
+| Header | 5 | format version `1` (u8), run seed (u32) |
+| Event | 3 | physics ticks (`FixedUpdate` calls while the run plays, 50 per second at the default fixed timestep; Godot uses 60) since the previous event (u16), event code (u8) |
+
+Event codes: `0x00` to `0x0F` movement (bit 0 left, bit 1 right, bit 2 up, bit 3 down,
+written only when the direction changes), `0x10` to `0x1F` level-up choice (low 4 bits =
+button index), `0xFF` run end.
 
 ## Remote Config Reference
 
@@ -178,7 +251,8 @@ Assets/
   Scripts/
     Bootstrap/         # GameBootstrap (SDK init, session restore)
     Core/              # GameManager, GameConfig, SaveData, RunState, GameColors
-    Horizon/           # HorizonManager facade (all 9 SDK features)
+    Horizon/           # HorizonManager facade (all SDK features the game uses)
+      ValidatedActions/  # Validated Actions assembly (ValidatedRunService, RunInputLog)
     Player/            # PlayerController, PlayerAnimator, PlayerStats
     Enemies/           # EnemyBase + Crab/Jellyfish/Pirate/Boss, EnemyPool, SpawnManager
     Weapons/           # WeaponBase + Feather/Screech/Dive/Gust, Projectile(+Pool), WeaponManager

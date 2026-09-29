@@ -1,0 +1,22 @@
+{
+    "name": "SeagullStorm.ValidatedActions",
+    "rootNamespace": "SeagullStorm",
+    "references": [
+        "ProjectMakers.Horizon"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.projectmakers.horizon",
+            "expression": "1.9.0",
+            "define": "HORIZON_VALIDATED_ACTIONS"
+        }
+    ],
+    "noEngineReferences": false
+}

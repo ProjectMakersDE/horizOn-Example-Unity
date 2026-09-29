@@ -59,6 +59,7 @@ namespace SeagullStorm
         private void OnSelect(int index)
         {
             if (_currentChoices == null || index >= _currentChoices.Count) return;
+            GameManager.Instance?.RecordLevelUpChoice(index);
             LevelUpManager.Instance?.SelectChoice(_currentChoices[index]);
         }
     }

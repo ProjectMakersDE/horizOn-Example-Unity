@@ -21,6 +21,12 @@ namespace SeagullStorm
         public int XpPerKillBase = 10;
         public float XpLevelCurve = 1.4f;
 
+        // Validated Actions (server-checked runs, needs a horizOn SDK with Validated Actions)
+        public const string ValidatedCoinsKey = "coins"; // value key in the rules of the API key
+        public bool ValidatedRunsEnabled = false;
+        public string ValidatedRunsBoard = "default"; // the board the hub shows
+        public bool ValidatedRunsSendCoins = false;
+
         // Wave system
         public int WaveIntervalSeconds = 15;
         public int WaveEnemyCountBase = 5;
@@ -89,6 +95,11 @@ namespace SeagullStorm
             TryGetInt(configs, "coin_divisor", ref c.CoinDivisor);
             TryGetInt(configs, "xp_per_kill_base", ref c.XpPerKillBase);
             TryGetFloat(configs, "xp_level_curve", ref c.XpLevelCurve);
+
+            TryGetBool(configs, "validated_runs_enabled", ref c.ValidatedRunsEnabled);
+            TryGetBool(configs, "validated_runs_send_coins", ref c.ValidatedRunsSendCoins);
+            if (configs.TryGetValue("validated_runs_board", out string board) && !string.IsNullOrWhiteSpace(board))
+                c.ValidatedRunsBoard = board.Trim();
 
             TryGetInt(configs, "wave_interval_seconds", ref c.WaveIntervalSeconds);
             TryGetInt(configs, "wave_enemy_count_base", ref c.WaveEnemyCountBase);

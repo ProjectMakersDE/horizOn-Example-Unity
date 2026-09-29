@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -35,6 +36,19 @@ namespace SeagullStorm
         private int _consecutiveWave1Deaths;
         public bool ScoreSubmitted { get; private set; }
 
+        // Validated Actions: whether the current run has a ticket, and its input log.
+        private readonly RunInputLog _inputLog = new RunInputLog();
+        private bool _validatedRun;
+        private string _validatedStartError;
+        private bool _startingRun;
+
+        /// <summary>Result of the last validated submit, null when the run used the plain submit.</summary>
+        public ValidatedRunOutcome LastValidatedOutcome { get; private set; }
+
+        /// <summary>True when Remote Config enables Validated Actions and the SDK supports it.</summary>
+        public bool UseValidatedActions =>
+            Config.ValidatedRunsEnabled && (HorizonManager.Instance?.ValidatedActionsSupported ?? false);
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -51,6 +65,13 @@ namespace SeagullStorm
         private void Start()
         {
             ChangeState(GameState.Hub);
+        }
+
+        private void FixedUpdate()
+        {
+            // Input log of a validated run: one physics tick per FixedUpdate while the run is playing.
+            if (!_validatedRun || CurrentState != GameState.Run) return;
+            _inputLog.RecordMove(PlayerController.Instance != null ? PlayerController.Instance.MoveDirection : Vector2.zero);
         }
 
         public void ChangeState(GameState newState)
@@ -87,8 +108,24 @@ namespace SeagullStorm
             OnStateChanged?.Invoke(newState);
         }
 
-        public void StartRun()
+        public async void StartRun()
         {
+            if (_startingRun) return; // the run ticket is still being requested (double click)
+            _startingRun = true;
+            try
+            {
+                // Validated Actions: get a single-use ticket and its seed before the run starts.
+                LastValidatedOutcome = null;
+                _validatedStartError = null;
+                _validatedRun = UseValidatedActions && await StartValidatedRun();
+                if (!_validatedRun)
+                    UnityEngine.Random.InitState(Environment.TickCount);
+            }
+            finally
+            {
+                _startingRun = false;
+            }
+
             float maxHP = Config.UpgradeHpValues[
                 Mathf.Clamp(Save.upgrades.hp, 0, Config.UpgradeHpValues.Length - 1)];
             RunState.Reset(maxHP, Config.RunDurationSeconds);
@@ -138,8 +175,8 @@ namespace SeagullStorm
                 _consecutiveWave1Deaths = 0;
             }
 
-            // Submit score
-            try { await HorizonManager.Instance.SubmitScore(run.score); } catch (System.Exception ex) { HorizonManager.Instance?.RecordException(ex); }
+            // Submit score (validated when the run has a ticket, plain otherwise)
+            try { await SubmitRunScore(run); } catch (System.Exception ex) { HorizonManager.Instance?.RecordException(ex); }
             ScoreSubmitted = true;
 
             // Save cloud data
@@ -162,6 +199,68 @@ namespace SeagullStorm
             catch (System.Exception ex) { HorizonManager.Instance?.RecordException(ex); }
 
             OnSaveDataChanged?.Invoke();
+        }
+
+        // ===== Validated Actions =====
+
+        private async Task<bool> StartValidatedRun()
+        {
+            try
+            {
+                int? seed = await HorizonManager.Instance.StartValidatedRun(Config.ValidatedRunsBoard);
+                if (seed == null)
+                {
+                    // For example offline, RUN_RATE_LIMITED or LEADERBOARD_NOT_FOUND: plain submit at game over.
+                    _validatedStartError = HorizonManager.Instance.LastValidatedErrorCode;
+                    Debug.LogWarning($"[SeagullStorm] Validated run not started: {_validatedStartError}");
+                    return false;
+                }
+
+                // Deterministic gameplay: the same seed and the same inputs give the same run.
+                UnityEngine.Random.InitState(seed.Value);
+                _inputLog.Begin(seed.Value);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                HorizonManager.Instance?.RecordException(ex);
+                return false;
+            }
+        }
+
+        private async Task SubmitRunScore(RunState run)
+        {
+            bool validated = _validatedRun;
+            _validatedRun = false;
+
+            if (!validated)
+            {
+                bool submitted = await HorizonManager.Instance.SubmitScore(run.score);
+                if (!submitted && _validatedStartError != null)
+                {
+                    // A "validated only" board refuses the plain submit: show why the run got no ticket.
+                    LastValidatedOutcome = new ValidatedRunOutcome { Accepted = false, ErrorCode = _validatedStartError };
+                }
+                return;
+            }
+
+            byte[] inputLog = _inputLog.Finish();
+            if (_inputLog.Truncated)
+                Debug.LogWarning($"[SeagullStorm] Input log reached {RunInputLog.MaxBytes} bytes, later input was not recorded");
+
+            // A rejected validated run does not fall back to the plain submit.
+            long coins = Config.ValidatedRunsSendCoins ? run.coinsEarned : 0;
+            LastValidatedOutcome = await HorizonManager.Instance.SubmitValidatedRun(
+                run.score, inputLog, $"wave_{run.wave}", GameConfig.ValidatedCoinsKey, coins);
+
+            if (!LastValidatedOutcome.Accepted)
+                Debug.LogWarning($"[SeagullStorm] Validated run rejected: {LastValidatedOutcome.ErrorCode}");
+        }
+
+        /// <summary>Records the level up button (0 based) the player picked in the input log of a validated run.</summary>
+        public void RecordLevelUpChoice(int buttonIndex)
+        {
+            if (_validatedRun) _inputLog.RecordLevelUpChoice(buttonIndex);
         }
 
         public bool TryPurchaseUpgrade(string upgradeType)

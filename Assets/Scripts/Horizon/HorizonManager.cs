@@ -8,7 +8,7 @@ using PM.horizOn.Cloud.Objects.Network.Responses;
 namespace SeagullStorm
 {
     /// <summary>
-    /// Facade for all 9 horizOn SDK features. Isolates SDK calls from gameplay code.
+    /// Facade for all horizOn SDK features the game uses. Isolates SDK calls from gameplay code.
     /// </summary>
     public class HorizonManager : MonoBehaviour
     {
@@ -133,6 +133,25 @@ namespace SeagullStorm
         public async Task<AppUserRankResponse> GetRank()
         {
             return await LeaderboardManager.Instance.GetRank();
+        }
+
+        // ===== Validated Actions =====
+        // Server-checked runs. The SDK calls live in ValidatedRunService, which compiles the real
+        // integration only with an SDK that ships Validated Actions (1.9.0 or newer).
+
+        public bool ValidatedActionsSupported => ValidatedRunService.IsSupported;
+
+        public string LastValidatedErrorCode => ValidatedRunService.LastErrorCode;
+
+        /// <returns>The server seed of the run, or null when no run was started</returns>
+        public Task<int?> StartValidatedRun(string leaderboardKey)
+        {
+            return ValidatedRunService.StartRun(leaderboardKey);
+        }
+
+        public Task<ValidatedRunOutcome> SubmitValidatedRun(long score, byte[] inputLog, string stage, string coinsKey, long coinsEarned)
+        {
+            return ValidatedRunService.Submit(score, inputLog, stage, coinsKey, coinsEarned);
         }
 
         // ===== News =====
