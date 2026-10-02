@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using TMPro;
 using PM.horizOn.Cloud.Objects.Network.Responses;
@@ -16,12 +17,13 @@ namespace SeagullStorm
         private GameObject _home, _demo;
         private TMP_Text _stats, _connection, _output, _runStatus;
         private TMP_InputField _name, _email, _password, _code, _feedback, _recipient, _template;
-        private Button _play;
+        private Button _play, _demoButton;
         private string _page = "top";
         private List<LeaderboardBoardResponse> _boards;
         private int _boardIndex;
         private bool _busy;
         private bool _title;
+        private GameState? _focusedState;
         private PlayerProfileResponse _profile;
         private int _avatarIndex;
         private string _language = "en";
@@ -40,13 +42,13 @@ namespace SeagullStorm
             if (HorizonManager.Instance == null) new GameObject("[HorizonManager]").AddComponent<HorizonManager>();
             if (_title)
             {
-                foreach (var c in FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None)) c.enabled = false;
+                foreach (var c in FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None)) DisableLegacyCanvas(c);
                 foreach (var c in FindObjectsByType<TitleScreenController>(FindObjectsSortMode.None)) c.enabled = false;
             }
             else
             {
                 var hub = GameObject.Find("HubCanvas");
-                if (hub != null && hub.TryGetComponent<Canvas>(out var old)) old.enabled = false;
+                if (hub != null && hub.TryGetComponent<Canvas>(out var old)) DisableLegacyCanvas(old);
                 Restyle();
             }
             var go = new GameObject("horizOn UI", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -57,6 +59,7 @@ namespace SeagullStorm
             _home = Panel(go.transform, "Home", new Vector2(1280,720), Vector2.zero, GameColors.DarkBG);
             var homeRect = _home.GetComponent<RectTransform>();
             homeRect.anchorMin = Vector2.zero; homeRect.anchorMax = Vector2.one; homeRect.sizeDelta = Vector2.zero;
+            _home.AddComponent<CanvasGroup>();
             BuildHome();
             if (!_title)
             {
@@ -66,6 +69,7 @@ namespace SeagullStorm
                 _runStatus.rectTransform.anchorMin = _runStatus.rectTransform.anchorMax = new Vector2(.5f, 0);
                 _runStatus.rectTransform.anchoredPosition = new Vector2(-110, 69);
             }
+            FocusControl(_play);
         }
         private void BuildHome()
         {
@@ -100,7 +104,7 @@ namespace SeagullStorm
             {
                 _play = Button(_home.transform,"START RUN",new Vector2(280,62),new Vector2(-460,-157),()=>GameManager.Instance.StartRun());
                 _playLabels.Add(_play.GetComponentInChildren<TMP_Text>());
-                Button(_home.transform,"SDK DEMOS",new Vector2(240,50),new Vector2(-174,-157),()=>{_demo.SetActive(true);_ = ShowLeaderboard();});
+                _demoButton = Button(_home.transform,"SDK DEMOS",new Vector2(240,50),new Vector2(-174,-157),ShowDemo);
                 _stats = Text(_home.transform,"",new Vector2(600,34),new Vector2(-300,-221),20,GameColors.Sand);
                 string[] ids={"speed","damage","hp","magnet"}; string[] labels={"SPEED","DAMAGE","HEALTH","MAGNET"};
                 for(int i=0;i<4;i++)
@@ -115,7 +119,7 @@ namespace SeagullStorm
         {
             _demo=Panel(_canvas.transform,"SDK demos",new Vector2(1210,630),Vector2.zero,new Color32(0x1C,0x1C,0x1C,255));
             Text(_demo.transform,"horizOn  /  SDK DEMOS",new Vector2(780,40),new Vector2(-166,265),26,GameColors.Orange,FontStyles.Bold);
-            Button(_demo.transform,"CLOSE",new Vector2(125,40),new Vector2(505,265),()=>_demo.SetActive(false));
+            Button(_demo.transform,"CLOSE",new Vector2(125,40),new Vector2(505,265),ShowHome);
             string[] buttons={"Top 10","Around me","My rank","Next board","News","Cloud save","Profile","Avatar","Apply avatar","EN / DE","Server state","Email demo"};
             Action[] actions={ ()=>{_page="top";Run(ShowLeaderboard);},()=>{_page="around";Run(ShowLeaderboard);},()=>Run(ShowRank),()=>Run(NextBoard),()=>Run(ShowNews),()=>Run(SyncSave),()=>Run(ShowProfile),()=>Run(NextAvatar),()=>Run(ApplyAvatar),()=>Run(LoadLocalization),()=>Run(ShowState),()=>ShowEmail() };
             for(int i=0;i<buttons.Length;i++) Button(_demo.transform,buttons[i],new Vector2(148,42),new Vector2(-502+(i%7)*166,204-(i/7)*54),actions[i]);
@@ -195,7 +199,17 @@ namespace SeagullStorm
             _connection.text=HorizonManager.Instance.ConnectionStatus;
             if(!_title&&GameManager.Instance!=null)
             {
-                bool hub=GameManager.Instance.CurrentState==GameState.Hub;_home.SetActive(hub);if(!hub)_demo.SetActive(false);
+                var state = GameManager.Instance.CurrentState;
+                bool hub=state==GameState.Hub;_home.SetActive(hub);if(!hub)_demo.SetActive(false);
+                bool enteredState = _focusedState != state;
+                _focusedState = state;
+                bool wasReady = _play.interactable;
+                _play.interactable = GameManager.Instance.ProgressLoaded && !GameManager.Instance.RunSubmissionPending && !GameManager.Instance.IsStartingRun;
+                _home.GetComponent<CanvasGroup>().interactable = !_demo.activeSelf;
+                // Loading may clear selection when Start becomes disabled. Focus only when
+                // entering the ready hub, leaving all later user navigation untouched.
+                if (hub && !_demo.activeSelf && _play.interactable && (enteredState || !wasReady)) FocusControl(_play);
+                else if (enteredState && state == GameState.Run) FocusControl(null);
                 _runStatus.gameObject.SetActive(!hub);
                 var gm=GameManager.Instance;
                 if(gm.CurrentState==GameState.GameOver)
@@ -207,9 +221,36 @@ namespace SeagullStorm
                 }
                 else _runStatus.text=gm.RunMode+"  •  "+string.Join(" / ",gm.RunState.activeWeapons)+"  •  WASD / arrows to move · Esc to pause";
                 var save=GameManager.Instance.Save;_stats.text=$"{save.coins:N0} coins  ·  Best {save.highscore:N0}  ·  {save.totalRuns} runs";
-                _play.interactable=GameManager.Instance.ProgressLoaded&&!GameManager.Instance.RunSubmissionPending&&!GameManager.Instance.IsStartingRun;
             }
             if(_busy)_connection.text="Request in progress…";
+        }
+        private void ShowDemo()
+        {
+            _home.GetComponent<CanvasGroup>().interactable = false;
+            _demo.SetActive(true);
+            FocusControl(_demo.transform.Find("Top 10")?.GetComponent<Button>());
+            _ = ShowLeaderboard();
+        }
+        private void ShowHome()
+        {
+            _demo.SetActive(false);
+            _home.GetComponent<CanvasGroup>().interactable = true;
+            FocusControl(_play.IsInteractable() ? _play : _demoButton);
+        }
+        public static void FocusControl(Button button)
+        {
+            var events = EventSystem.current;
+            if (events == null) return;
+            events.firstSelectedGameObject = button != null ? button.gameObject : null;
+            events.SetSelectedGameObject(events.firstSelectedGameObject);
+        }
+        private static void DisableLegacyCanvas(Canvas canvas)
+        {
+            canvas.enabled = false;
+            var raycaster = canvas.GetComponent<GraphicRaycaster>();
+            if (raycaster != null) raycaster.enabled = false;
+            var group = canvas.GetComponent<CanvasGroup>() ?? canvas.gameObject.AddComponent<CanvasGroup>();
+            group.interactable = false; group.blocksRaycasts = false;
         }
         private static void Restyle()
         {
@@ -239,8 +280,14 @@ namespace SeagullStorm
             }
             foreach (var button in root.GetComponentsInChildren<Button>(true))
             {
+                if (button.GetComponent<SeagullSelectionOutline>() == null) button.gameObject.AddComponent<SeagullSelectionOutline>();
+                var colors = button.colors;
+                colors.normalColor = Color.white; colors.highlightedColor = GameColors.Sand;
+                colors.pressedColor = GameColors.Teal; colors.selectedColor = Color.white;
+                colors.disabledColor = new Color(.35f, .35f, .35f); button.colors = colors;
+                button.spriteState = default; button.transition = Selectable.Transition.ColorTint;
                 if (button.targetGraphic is Image image)
-                { image.sprite = null; image.type = Image.Type.Simple; image.color = GameColors.Orange; }
+                { image.sprite = null; image.overrideSprite = null; image.type = Image.Type.Simple; image.color = GameColors.Orange; }
                 foreach (var t in button.GetComponentsInChildren<TMP_Text>(true))
                 { t.color = GameColors.DarkText; t.fontSizeMax = 26; t.fontStyle = FontStyles.Bold; }
             }
@@ -267,12 +314,28 @@ namespace SeagullStorm
         }
         private static Button Button(Transform p,string title,Vector2 size,Vector2 pos,Action action)
         {
-            var go=Panel(p,title,size,pos,GameColors.Orange);var b=go.AddComponent<Button>();b.targetGraphic=go.GetComponent<Image>();var text=Text(go.transform,title,size-Vector2.one*8,Vector2.zero,18,GameColors.DarkBG,FontStyles.Bold);text.alignment=TextAlignmentOptions.Center;b.onClick.AddListener(()=>action());var colors=b.colors;colors.highlightedColor=GameColors.Sand;colors.pressedColor=GameColors.Teal;colors.disabledColor=new Color(.35f,.35f,.35f);b.colors=colors;return b;
+            var go=Panel(p,title,size,pos,GameColors.Orange);var b=go.AddComponent<Button>();go.AddComponent<SeagullSelectionOutline>();b.targetGraphic=go.GetComponent<Image>();var text=Text(go.transform,title,size-Vector2.one*8,Vector2.zero,18,GameColors.DarkBG,FontStyles.Bold);text.alignment=TextAlignmentOptions.Center;b.onClick.AddListener(()=>action());var colors=b.colors;colors.highlightedColor=GameColors.Sand;colors.pressedColor=GameColors.Teal;colors.disabledColor=new Color(.35f,.35f,.35f);b.colors=colors;return b;
         }
         private static TMP_InputField Input(Transform p,string placeholder,Vector2 size,Vector2 pos)
         {
             var go=Panel(p,placeholder,size,pos,new Color32(0x31,0x31,0x31,255));var text=Text(go.transform,"",size-new Vector2(20,4),Vector2.zero,18,GameColors.LightText);var hint=Text(go.transform,placeholder,size-new Vector2(20,4),Vector2.zero,17,GameColors.Sand);var input=go.AddComponent<TMP_InputField>();input.textViewport=go.GetComponent<RectTransform>();input.textComponent=(TextMeshProUGUI)text;input.placeholder=hint;input.characterLimit=256;return input;
         }
+    }
+    public class SeagullSelectionOutline : MonoBehaviour, ISelectHandler, IDeselectHandler
+    {
+        private Outline _outline;
+        private void Awake()
+        {
+            _outline = gameObject.AddComponent<Outline>();
+            _outline.effectColor = GameColors.LightText;
+            var scaler = GetComponentInParent<CanvasScaler>();
+            float units = scaler != null ? scaler.referenceResolution.y / 720f : 1f;
+            _outline.effectDistance = new Vector2(3, 3) * units;
+            _outline.enabled = false;
+        }
+        private void OnEnable() { if (_outline != null) _outline.enabled = EventSystem.current?.currentSelectedGameObject == gameObject; }
+        public void OnSelect(BaseEventData data) { if (_outline != null) _outline.enabled = true; }
+        public void OnDeselect(BaseEventData data) { if (_outline != null) _outline.enabled = false; }
     }
     public class UpgradePreview:MonoBehaviour
     {

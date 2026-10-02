@@ -10,7 +10,7 @@ The shared square-headed seagull and island artwork use the horizOn charcoal, cr
 2. Open `Assets/Scenes/BootScene.unity` and press Play.
 3. Choose **PLAY OFFLINE** for a fully playable practice game, or sign in for online features.
 
-**Controls:** WASD / arrow keys move; attacks fire automatically; collect shells to gain XP; click a level-up card; Escape pauses. The hub offers Speed, Damage, Health and Magnet upgrades.
+**Controls:** WASD / arrow keys move; attacks fire automatically; collect shells to gain XP; Escape pauses. In menus, arrow keys navigate and Return activates the outlined control; level-up cards also support mouse selection. Play Offline, Start Run, Resume, the first level-up choice and Retry receive initial keyboard focus. The SDK panel keeps navigation within its visible controls and returns focus to Start Run when ready, or SDK Demos while loading, when closed. The hub offers Speed, Damage, Health and Magnet upgrades.
 
 The title loads immediately. If a secret SDK config exists, the connection is prepared in the background. Practice mode stays separate from cached signed-in sessions, remote balancing, cloud saves and leaderboard writes. Its progress uses a separate device-local key.
 

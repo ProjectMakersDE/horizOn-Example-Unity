@@ -25,6 +25,7 @@ namespace SeagullStorm
             if (newsButton != null) newsButton.onClick.AddListener(OnNews);
             if (feedbackButton != null) feedbackButton.onClick.AddListener(OnFeedback);
             if (quitButton != null) quitButton.onClick.AddListener(OnQuit);
+            SeagullInterface.FocusControl(resumeButton);
         }
 
         private void OnDisable()

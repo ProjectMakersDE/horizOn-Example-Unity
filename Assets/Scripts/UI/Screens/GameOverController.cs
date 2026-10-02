@@ -28,6 +28,7 @@ namespace SeagullStorm
             if (hubButton != null) hubButton.onClick.AddListener(OnHub);
 
             ShowStats();
+            SeagullInterface.FocusControl(playAgainButton);
         }
 
         private void OnDisable()

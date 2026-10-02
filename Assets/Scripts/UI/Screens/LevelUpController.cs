@@ -40,6 +40,7 @@ namespace SeagullStorm
 
             var layout = choiceContainer != null ? choiceContainer.GetComponent<HorizontalLayoutGroup>() : null;
             if (layout != null) { layout.spacing = 12; layout.childControlWidth = true; layout.childForceExpandWidth = true; }
+            Button firstChoice = null;
             for (int i = 0; i < choices.Count; i++)
             {
                 var choice = choices[i];
@@ -50,6 +51,7 @@ namespace SeagullStorm
                 var nameText = card.transform.Find("NameText")?.GetComponent<TMP_Text>();
                 var descText = card.transform.Find("DescText")?.GetComponent<TMP_Text>();
                 var button = card.GetComponent<Button>();
+                if (firstChoice == null) firstChoice = button;
 
                 if (nameText != null)
                 {
@@ -68,6 +70,7 @@ namespace SeagullStorm
                 int idx = i;
                 if (button != null) button.onClick.AddListener(() => OnSelect(idx));
             }
+            SeagullInterface.FocusControl(firstChoice);
         }
 
         private void OnSelect(int index)
