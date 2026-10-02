@@ -33,7 +33,16 @@ namespace SeagullStorm
         public event Action<GameState> OnStateChanged;
         public event Action OnSaveDataChanged;
 
+        public bool ProgressLoaded { get; set; }
+        public int RunGeneration { get; private set; }
+        public bool IsStartingRun => _startingRun;
+        public bool RunSubmissionPending { get; private set; }
+        public string SubmissionStatus { get; private set; } = "Offline practice • no score submitted";
+        public bool Victory { get; private set; }
+        public bool IsValidatedRun => _validatedRun;
+        public string RunMode => _validatedRun ? "VALIDATED RUN" : HorizonManager.Instance?.Online == true && !Config.ValidatedRunsEnabled ? "ONLINE RUN" : "PRACTICE RUN";
         private int _consecutiveWave1Deaths;
+        private bool _runEnded;
         public bool ScoreSubmitted { get; private set; }
 
         // Validated Actions: whether the current run has a ticket, and its input log.
@@ -64,6 +73,7 @@ namespace SeagullStorm
 
         private void Start()
         {
+            SeagullArt.CreateArena(tilemap != null ? tilemap.transform : null);
             ChangeState(GameState.Hub);
         }
 
@@ -110,16 +120,30 @@ namespace SeagullStorm
 
         public async void StartRun()
         {
-            if (_startingRun) return; // the run ticket is still being requested (double click)
+            if (_startingRun || RunSubmissionPending) return; // the run ticket is still being requested (double click)
             _startingRun = true;
             try
             {
                 // Validated Actions: get a single-use ticket and its seed before the run starts.
                 LastValidatedOutcome = null;
+                _runEnded = false;
+                RunGeneration++;
+                Victory = false;
+                SubmissionStatus = "Playing";
                 _validatedStartError = null;
-                _validatedRun = UseValidatedActions && await StartValidatedRun();
+                _validatedRun = HorizonManager.Instance?.Online == true && UseValidatedActions && await StartValidatedRun();
+                if (HorizonManager.Instance?.Online != true) _validatedStartError = "OFFLINE_PRACTICE";
+                else if (Config.ValidatedRunsEnabled && !_validatedRun) _validatedStartError ??= "VALIDATION_UNAVAILABLE";
                 if (!_validatedRun)
+                {
+                    if (_validatedStartError != null && _validatedStartError != "OFFLINE_PRACTICE")
+                    {
+                        HorizonManager.Instance.EnterPractice();
+                        Config = new GameConfig();
+                        LoadLocalProgress();
+                    }
                     UnityEngine.Random.InitState(Environment.TickCount);
+                }
             }
             finally
             {
@@ -148,8 +172,15 @@ namespace SeagullStorm
             AudioManager.Instance?.PlayBattleMusic();
         }
 
-        public async void EndRun()
+        public async void EndRun(bool victory = false)
         {
+            if (_runEnded || CurrentState != GameState.Run) return;
+            _runEnded = true;
+            Victory = victory;
+            RunSubmissionPending = true;
+            ChangeState(GameState.GameOver);
+            AudioManager.Instance?.PlayGameOver();
+            AudioManager.Instance?.PlayMenuMusic();
             var run = RunState;
             run.coinsEarned = run.score / Mathf.Max(1, Config.CoinDivisor);
             Save.coins += run.coinsEarned;
@@ -157,6 +188,7 @@ namespace SeagullStorm
 
             if (run.score > Save.highscore)
                 Save.highscore = run.score;
+            PersistLocalProgress();
 
             // Check balance warning
             if (run.wave <= 1 && run.playerHP <= 0)
@@ -176,7 +208,7 @@ namespace SeagullStorm
             }
 
             // Submit score (validated when the run has a ticket, plain otherwise)
-            try { await SubmitRunScore(run); } catch (System.Exception ex) { HorizonManager.Instance?.RecordException(ex); }
+            try { await SubmitRunScore(run); } catch (System.Exception ex) { SubmissionStatus = "Submission failed: " + ex.Message; HorizonManager.Instance?.RecordException(ex); }
             ScoreSubmitted = true;
 
             // Save cloud data
@@ -198,6 +230,8 @@ namespace SeagullStorm
             }
             catch (System.Exception ex) { HorizonManager.Instance?.RecordException(ex); }
 
+            PersistLocalProgress();
+            RunSubmissionPending = false;
             OnSaveDataChanged?.Invoke();
         }
 
@@ -207,16 +241,16 @@ namespace SeagullStorm
         {
             try
             {
-                int? seed = await HorizonManager.Instance.StartValidatedRun(Config.ValidatedRunsBoard);
+                int? seed = await HorizonManager.Instance.StartValidatedRun(HorizonManager.Instance.ActiveBoard);
                 if (seed == null)
                 {
-                    // For example offline, RUN_RATE_LIMITED or LEADERBOARD_NOT_FOUND: plain submit at game over.
+                    // Missing tickets make this a practice run; no plain score fallback.
                     _validatedStartError = HorizonManager.Instance.LastValidatedErrorCode;
                     Debug.LogWarning($"[SeagullStorm] Validated run not started: {_validatedStartError}");
                     return false;
                 }
 
-                // Deterministic gameplay: the same seed and the same inputs give the same run.
+                // Seed the run; physics/input logs are evidence, not authoritative replay verification.
                 UnityEngine.Random.InitState(seed.Value);
                 _inputLog.Begin(seed.Value);
                 return true;
@@ -235,24 +269,35 @@ namespace SeagullStorm
 
             if (!validated)
             {
-                bool submitted = await HorizonManager.Instance.SubmitScore(run.score);
-                if (!submitted && _validatedStartError != null)
+                // A missing ticket never downgrades a requested validated run to a normal score.
+                if (_validatedStartError != null || HorizonManager.Instance?.Online != true)
                 {
-                    // A "validated only" board refuses the plain submit: show why the run got no ticket.
-                    LastValidatedOutcome = new ValidatedRunOutcome { Accepted = false, ErrorCode = _validatedStartError };
+                    SubmissionStatus = _validatedStartError == "OFFLINE_PRACTICE" ? "Practice score saved on this device" : "Practice only • ticket unavailable: " + _validatedStartError;
+                    LastValidatedOutcome = new ValidatedRunOutcome { Accepted = false, ErrorCode = _validatedStartError ?? "OFFLINE_PRACTICE" };
+                    return;
                 }
+                bool submitted = await HorizonManager.Instance.SubmitScore(run.score);
+                SubmissionStatus = submitted ? "Score submitted" : "Not ranked: " + HorizonManager.Instance.LastLeaderboardError;
+                if (!submitted) LastValidatedOutcome = new ValidatedRunOutcome { ErrorCode = HorizonManager.Instance.LastLeaderboardError };
                 return;
             }
 
             byte[] inputLog = _inputLog.Finish();
             if (_inputLog.Truncated)
-                Debug.LogWarning($"[SeagullStorm] Input log reached {RunInputLog.MaxBytes} bytes, later input was not recorded");
+            {
+                ValidatedRunService.Discard();
+                LastValidatedOutcome = new ValidatedRunOutcome { ErrorCode = "INCOMPLETE_EVIDENCE" };
+                SubmissionStatus = "Not ranked: input evidence limit reached";
+                return;
+            }
 
             // A rejected validated run does not fall back to the plain submit.
             long coins = Config.ValidatedRunsSendCoins ? run.coinsEarned : 0;
+            SubmissionStatus = "Waiting for server validation…";
             LastValidatedOutcome = await HorizonManager.Instance.SubmitValidatedRun(
                 run.score, inputLog, $"wave_{run.wave}", GameConfig.ValidatedCoinsKey, coins);
 
+            SubmissionStatus = LastValidatedOutcome.Accepted ? "Accepted by server" : "Rejected: " + LastValidatedOutcome.ErrorCode;
             if (!LastValidatedOutcome.Accepted)
                 Debug.LogWarning($"[SeagullStorm] Validated run rejected: {LastValidatedOutcome.ErrorCode}");
         }
@@ -265,6 +310,7 @@ namespace SeagullStorm
 
         public bool TryPurchaseUpgrade(string upgradeType)
         {
+            if (RunSubmissionPending || !ProgressLoaded || CurrentState != GameState.Hub) return false;
             int currentLevel;
             int[] costs;
             int maxLevel;
@@ -311,7 +357,9 @@ namespace SeagullStorm
             }
 
             HorizonManager.Instance?.RecordBreadcrumb("user_action", $"bought_{upgradeType}_{currentLevel + 1}");
+            PersistLocalProgress();
             OnSaveDataChanged?.Invoke();
+            _ = HorizonManager.Instance?.SaveCloudData(JsonUtility.ToJson(Save));
             return true;
         }
 
@@ -339,8 +387,29 @@ namespace SeagullStorm
                 Mathf.Clamp(Save.upgrades.magnet, 0, Config.UpgradeMagnetValues.Length - 1)];
         }
 
+        private string _progressKey;
+        private string ProgressKey => _progressKey ?? "seagull-storm.progress.practice";
+        public void LoadLocalProgress()
+        {
+            _progressKey = "seagull-storm.progress." + (SeagullSmoke.Enabled ? "qa." : "") + (HorizonManager.Instance?.GetUserId() ?? "practice");
+            try
+            {
+                Save = PlayerPrefs.HasKey(ProgressKey) ? JsonUtility.FromJson<SaveData>(PlayerPrefs.GetString(ProgressKey)) : SaveData.CreateDefault();
+                if (Save == null || Save.upgrades == null) Save = SaveData.CreateDefault();
+                Save.giftCodesRedeemed ??= new System.Collections.Generic.List<string>();
+            }
+            catch (Exception) { Save = SaveData.CreateDefault(); }
+        }
+        public void PersistLocalProgress()
+        {
+            PlayerPrefs.SetString(ProgressKey, JsonUtility.ToJson(Save));
+            PlayerPrefs.Save();
+        }
+        public void NotifyProgressChanged() { PersistLocalProgress(); OnSaveDataChanged?.Invoke(); }
+
         public void SignOutAndReturn()
         {
+            if (RunSubmissionPending || _startingRun) return;
             HorizonManager.Instance?.SignOut();
             SceneManager.LoadScene("TitleScene");
         }

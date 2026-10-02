@@ -39,7 +39,8 @@ namespace SeagullStorm
                     WeaponManager.Instance?.AddWeapon(choice.weaponId);
                     break;
                 case "weapon_upgrade":
-                    WeaponManager.Instance?.UpgradeWeapon(choice.weaponId);
+                    if (choice.id == "feather_speed") WeaponManager.Instance?.IncreaseFireRate(choice.weaponId);
+                    else WeaponManager.Instance?.UpgradeWeapon(choice.weaponId);
                     break;
                 case "stat_boost":
                     ApplyStatBoost(choice.id);
@@ -66,38 +67,30 @@ namespace SeagullStorm
                 return choices;
             }
 
-            int totalWeight = 0;
-            foreach (var e in pool) totalWeight += e.weight;
-
-            var used = new HashSet<string>();
-            int numChoices = Mathf.Min(config.LevelupChoices, pool.Count);
-
-            while (choices.Count < numChoices && used.Count < pool.Count)
+            var candidates = new List<LevelupPoolEntry>();
+            foreach (var entry in pool)
             {
-                int roll = UnityEngine.Random.Range(0, totalWeight);
-                int cumulative = 0;
-
-                foreach (var entry in pool)
-                {
-                    cumulative += entry.weight;
-                    if (roll < cumulative && !used.Contains(entry.id))
-                    {
-                        if (entry.type == "weapon_new")
-                        {
-                            string wid = GetWeaponIdForEntry(entry.id);
-                            if (WeaponManager.Instance != null && WeaponManager.Instance.HasWeapon(wid))
-                            {
-                                used.Add(entry.id);
-                                break;
-                            }
-                        }
-
-                        used.Add(entry.id);
-                        choices.Add(CreateChoice(entry));
-                        break;
-                    }
-                }
+                if (entry.weight <= 0) continue;
+                if (entry.type == "weapon_new" && WeaponManager.Instance?.HasWeapon(GetWeaponIdForEntry(entry.id)) == true) continue;
+                candidates.Add(entry);
             }
+            int count = Mathf.Clamp(config.LevelupChoices, 1, 3);
+            while (choices.Count < count && candidates.Count > 0)
+            {
+                int weight = 0;
+                foreach (var entry in candidates) weight += entry.weight;
+                int roll = UnityEngine.Random.Range(0, weight);
+                int selected = 0;
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    roll -= candidates[i].weight;
+                    if (roll < 0) { selected = i; break; }
+                }
+                choices.Add(CreateChoice(candidates[selected]));
+                candidates.RemoveAt(selected);
+            }
+            if (choices.Count == 0)
+                choices.Add(new LevelUpChoice { id = "max_hp", type = "stat_boost", displayName = "Second wind", description = "Heal +20 / max HP +20" });
 
             return choices;
         }

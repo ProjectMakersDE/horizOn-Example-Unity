@@ -28,6 +28,7 @@ namespace SeagullStorm
 
         private async void OnSubmit()
         {
+            if (HorizonManager.Instance?.Online != true) { SetStatus("Sign in to send feedback."); return; }
             string title = titleInput != null ? titleInput.text : "";
             string msg = messageInput != null ? messageInput.text : "";
             string category = "GENERAL";

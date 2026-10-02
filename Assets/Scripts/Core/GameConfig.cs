@@ -62,13 +62,13 @@ namespace SeagullStorm
         public float WeaponGustKnockback = 60f;
 
         // Hub upgrades
-        public int[] UpgradeSpeedCosts = { 100, 300, 600, 1000 };
+        public int[] UpgradeSpeedCosts = { 10, 25, 60, 100 };
         public float[] UpgradeSpeedValues = { 1.0f, 1.1f, 1.2f, 1.35f, 1.5f };
-        public int[] UpgradeDamageCosts = { 100, 300, 600, 1000 };
+        public int[] UpgradeDamageCosts = { 10, 25, 60, 100 };
         public float[] UpgradeDamageValues = { 1.0f, 1.15f, 1.3f, 1.5f, 1.8f };
-        public int[] UpgradeHpCosts = { 150, 400, 800 };
+        public int[] UpgradeHpCosts = { 15, 40, 80 };
         public float[] UpgradeHpValues = { 100f, 130f, 170f, 220f };
-        public int[] UpgradeMagnetCosts = { 200, 500 };
+        public int[] UpgradeMagnetCosts = { 20, 50 };
         public float[] UpgradeMagnetValues = { 50f, 80f, 120f };
 
         // Levelup
@@ -154,6 +154,10 @@ namespace SeagullStorm
                 catch (System.Exception ex) { Debug.LogWarning($"Config parse error for levelup_pool: {ex.Message}"); }
             }
 
+            c.RunDurationSeconds = Mathf.Clamp(c.RunDurationSeconds, 20, 900);
+            c.WaveIntervalSeconds = Mathf.Clamp(c.WaveIntervalSeconds, 3, 60);
+            c.WaveEnemyCountGrowth = Mathf.Clamp(c.WaveEnemyCountGrowth, 1, 2);
+            c.LevelupChoices = Mathf.Clamp(c.LevelupChoices, 1, 3);
             return c;
         }
 
@@ -162,7 +166,7 @@ namespace SeagullStorm
             if (configs.TryGetValue(key, out string s) && float.TryParse(s,
                 System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out float v))
-                value = v;
+                if (!float.IsNaN(v) && !float.IsInfinity(v)) value = v;
         }
 
         private static void TryGetInt(Dictionary<string, string> configs, string key, ref int value)
@@ -184,7 +188,7 @@ namespace SeagullStorm
                 try
                 {
                     var wrapper = JsonUtility.FromJson<IntArrayWrapper>("{\"items\":" + s + "}");
-                    if (wrapper?.items != null) value = wrapper.items;
+                    if (wrapper?.items != null && wrapper.items.Length > 0) value = wrapper.items;
                 }
                 catch (System.Exception ex) { Debug.LogWarning($"Config parse error for key: {ex.Message}"); }
             }
@@ -197,7 +201,7 @@ namespace SeagullStorm
                 try
                 {
                     var wrapper = JsonUtility.FromJson<FloatArrayWrapper>("{\"items\":" + s + "}");
-                    if (wrapper?.items != null) value = wrapper.items;
+                    if (wrapper?.items != null && wrapper.items.Length > 0) value = wrapper.items;
                 }
                 catch (System.Exception ex) { Debug.LogWarning($"Config parse error for key: {ex.Message}"); }
             }

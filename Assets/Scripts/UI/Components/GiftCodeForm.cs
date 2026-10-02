@@ -26,7 +26,8 @@ namespace SeagullStorm
 
         private async void OnRedeem()
         {
-            string code = codeInput != null ? codeInput.text : "";
+            if (HorizonManager.Instance?.Online != true) { SetStatus("Sign in to redeem online gifts."); return; }
+            string code = codeInput != null ? codeInput.text.Trim() : "";
             if (string.IsNullOrWhiteSpace(code))
             {
                 SetStatus("Enter a code.");
@@ -60,11 +61,13 @@ namespace SeagullStorm
                     {
                         var reward = JsonUtility.FromJson<GiftReward>(result.giftData);
                         if (reward != null && save != null)
-                            save.coins += reward.coins;
+                            save.coins += Mathf.Max(0, reward.coins);
                     }
                     catch (System.Exception ex) { HorizonManager.Instance?.RecordException(ex); }
                 }
 
+                GameManager.Instance?.NotifyProgressChanged();
+                if (save != null) await HorizonManager.Instance.SaveCloudData(JsonUtility.ToJson(save));
                 SetStatus("Redeemed!");
             }
             else

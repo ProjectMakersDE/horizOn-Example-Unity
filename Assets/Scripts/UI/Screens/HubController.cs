@@ -50,33 +50,41 @@ namespace SeagullStorm
             if (GameManager.Instance != null)
                 GameManager.Instance.OnSaveDataChanged += RefreshUI;
 
-            // Load remote config
-            var configs = await HorizonManager.Instance.LoadAllConfigs(useCache: true);
-            if (configs != null && GameManager.Instance != null)
-                GameManager.Instance.Config = GameConfig.Parse(configs);
-
-            // Load cloud save
-            string json = await HorizonManager.Instance.LoadCloudData();
-            if (GameManager.Instance != null)
+            await System.Threading.Tasks.Task.Yield();
+            var gm = GameManager.Instance;
+            if (gm == null) return;
+            int generation = HorizonManager.Instance.Generation;
+            string owner = HorizonManager.Instance.GetUserId();
+            bool Current() => this != null && gm != null && GameManager.Instance == gm && HorizonManager.Instance.Generation == generation && HorizonManager.Instance.GetUserId() == owner;
+            if (!gm.ProgressLoaded)
             {
-                if (!string.IsNullOrEmpty(json))
+                gm.LoadLocalProgress();
+                // Lock play while session-specific progress is loading, so a late response cannot overwrite a run.
+                if (playButton != null) playButton.interactable = false;
+                try
                 {
-                    try
+                    var configs = await HorizonManager.Instance.LoadAllConfigs();
+                    if (!Current()) return;
+                    if (configs != null) gm.Config = GameConfig.Parse(configs);
+                    HorizonManager.Instance.ActiveBoard = gm.Config.ValidatedRunsBoard;
+                    string json = await HorizonManager.Instance.LoadCloudData();
+                    if (!Current()) return;
+                    if (!string.IsNullOrWhiteSpace(json))
                     {
-                        GameManager.Instance.Save = JsonUtility.FromJson<SaveData>(json);
-                    }
-                    catch (System.Exception ex)
-                    {
-                        Debug.LogWarning($"Cloud save JSON parse failed, using defaults: {ex.Message}");
-                        HorizonManager.Instance?.RecordException(ex);
-                        GameManager.Instance.Save = SaveData.CreateDefault();
+                        var cloud = JsonUtility.FromJson<SaveData>(json);
+                        if (cloud != null && cloud.upgrades != null)
+                        {
+                            cloud.giftCodesRedeemed ??= new List<string>();
+                            gm.Save = cloud;
+                            gm.PersistLocalProgress();
+                        }
                     }
                 }
-                else
-                    GameManager.Instance.Save = SaveData.CreateDefault();
+                catch (System.Exception ex) { Debug.LogWarning("[SeagullStorm] Hub load failed: " + ex.Message); }
+                finally { if (Current()) { gm.ProgressLoaded = true; if (playButton != null) playButton.interactable = true; } }
             }
-
-            HorizonManager.Instance.RecordBreadcrumb("navigation", "hub_loaded");
+            if (!Current()) return;
+            HorizonManager.Instance?.RecordBreadcrumb("navigation", "hub_loaded");
 
             RefreshUI();
             await LoadLeaderboard();

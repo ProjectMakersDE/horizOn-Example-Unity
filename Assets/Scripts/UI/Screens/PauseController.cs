@@ -76,7 +76,8 @@ namespace SeagullStorm
         private void OnQuit()
         {
             // Quit run = trigger game over
-            PlayerController.Instance?.TakeDamage(99999);
+            GameManager.Instance.ChangeState(GameState.Run);
+            GameManager.Instance.EndRun();
         }
 
         private void Update()

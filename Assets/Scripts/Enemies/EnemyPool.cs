@@ -36,6 +36,7 @@ namespace SeagullStorm
                 {
                     if (prefab == null) return null;
                     var obj = Instantiate(prefab, transform);
+                    SeagullArt.Attach(obj.gameObject);
                     obj.gameObject.SetActive(false);
                     return obj;
                 },
@@ -98,7 +99,7 @@ namespace SeagullStorm
         {
             foreach (Transform child in transform)
             {
-                child.gameObject.SetActive(false);
+                if (child.gameObject.activeSelf) ReturnEnemy(child.GetComponent<EnemyBase>());
             }
         }
     }

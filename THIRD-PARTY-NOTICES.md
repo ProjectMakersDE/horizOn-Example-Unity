@@ -114,3 +114,11 @@ DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
+
+## Seagull Storm shared artwork
+
+Nine PNGs under `Assets/Resources/SeagullArt/` were generated for this project on
+2026-10-02 with `google/gemini-2.5-flash-image` through OpenRouter. Magenta isolation
+backgrounds were processed into real RGBA transparency. Model, prompts, processing
+and final SHA-256 hashes are recorded in `ART-PROVENANCE.json`. The shared artwork
+is included under this example's MIT license.
