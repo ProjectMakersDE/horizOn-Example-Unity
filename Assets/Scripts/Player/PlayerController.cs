@@ -14,7 +14,7 @@ namespace SeagullStorm
         private Vector2 _moveInput;
         private float _baseSpeed = 145f;
         private float _invulnerableUntil;
-        private void OnEnable() { _invulnerableUntil = 0; _moveInput = Vector2.zero; }
+        private void OnEnable() { _invulnerableUntil = 0; _moveInput = Vector2.zero; if (_sprite != null) _sprite.color = Color.white; }
 
         public Vector2 MoveDirection => _moveInput.normalized;
         public Vector2 LastNonZeroDirection { get; private set; } = Vector2.right;
@@ -61,6 +61,7 @@ namespace SeagullStorm
             _invulnerableUntil = Time.time + 0.65f;
             var run = GameManager.Instance.RunState;
             run.playerHP -= amount;
+            GetComponent<SeagullCutoutRig>()?.PlayHurt();
             CombatFeedback.Hit(transform.position, amount, true);
             StartCoroutine(HitFlash());
             AudioManager.Instance?.PlayPlayerHit();

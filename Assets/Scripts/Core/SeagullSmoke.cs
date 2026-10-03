@@ -22,21 +22,21 @@ namespace SeagullStorm
             yield return new WaitUntil(()=>SceneManager.GetActiveScene().name=="TitleScene");
             yield return new WaitForSecondsRealtime(2);
             if (!CheckFocus("PLAY OFFLINE", true)) yield break;
-            ScreenCapture.CaptureScreenshot(Path.GetFullPath(Path.Combine(Application.dataPath,"../../qa-title.png")));
+            ScreenCapture.CaptureScreenshot(CapturePath("title"));
             yield return new WaitForSecondsRealtime(.5f);
             SceneManager.LoadScene("GameScene");
             yield return new WaitForSecondsRealtime(2);
             var gm=GameManager.Instance;
             if (gm==null || !gm.ProgressLoaded || HorizonManager.Instance.Online) { Fail("Offline hub failed");yield break; }
             if (!CheckFocus("START RUN", true)) yield break;
-            ScreenCapture.CaptureScreenshot(Path.GetFullPath(Path.Combine(Application.dataPath,"../../qa-hub.png")));
+            ScreenCapture.CaptureScreenshot(CapturePath("hub"));
             yield return new WaitForSecondsRealtime(.5f);
             var sdkButton = GameObject.Find("SDK DEMOS")?.GetComponent<UnityEngine.UI.Button>();
             if (sdkButton == null) { Fail("SDK panel button missing"); yield break; }
             sdkButton.onClick.Invoke();
             yield return new WaitForSecondsRealtime(.3f);
             if (!CheckFocus("Top 10", true)) yield break;
-            ScreenCapture.CaptureScreenshot(Path.GetFullPath(Path.Combine(Application.dataPath,"../../qa-sdk.png")));
+            ScreenCapture.CaptureScreenshot(CapturePath("sdk"));
             yield return new WaitForSecondsRealtime(.5f);
             gm.ProgressLoaded = false;
             yield return null;
@@ -51,6 +51,8 @@ namespace SeagullStorm
             gm.Config.RunDurationSeconds=30; gm.Config.BossWaveEnabled=false;
             gm.StartRun(); yield return new WaitForSecondsRealtime(1);
             if(gm.CurrentState!=GameState.Run || PlayerController.Instance==null){Fail("Run did not start");yield break;}
+            yield return SeagullCutoutSmoke.Check();
+            if (!SeagullCutoutSmoke.Passed) yield break;
             var start=PlayerController.Instance.transform.position;
             PlayerController.Instance.transform.position=start+Vector3.right*50;
             yield return new WaitForSecondsRealtime(1);
@@ -58,7 +60,7 @@ namespace SeagullStorm
             yield return new WaitForSecondsRealtime(.3f);
             if(Mathf.Abs(gm.RunState.duration-duration)>.01f){Fail("Pause advanced timer");yield break;}
             if (!CheckFocus("ResumeButton", true)) yield break;
-            ScreenCapture.CaptureScreenshot(Path.GetFullPath(Path.Combine(Application.dataPath,"../../qa-pause.png")));
+            ScreenCapture.CaptureScreenshot(CapturePath("pause"));
             yield return new WaitForSecondsRealtime(.5f);
             gm.ChangeState(GameState.Run);
             WeaponManager.Instance.AddWeapon("screech");WeaponManager.Instance.AddWeapon("gust");
@@ -66,7 +68,7 @@ namespace SeagullStorm
             yield return new WaitForSecondsRealtime(1);
             if(gm.CurrentState!=GameState.LevelUp){Fail("Shell XP did not offer level-up");yield break;}
             if (!CheckFocus("LevelUpChoiceCard(Clone)", true)) yield break;
-            ScreenCapture.CaptureScreenshot(Path.GetFullPath(Path.Combine(Application.dataPath,"../../qa-levelup.png")));
+            ScreenCapture.CaptureScreenshot(CapturePath("levelup"));
             yield return new WaitForSecondsRealtime(.5f);
             LevelUpManager.Instance.SelectChoice(new LevelUpChoice{id="max_hp",type="stat_boost"});
             yield return new WaitForSecondsRealtime(3);
@@ -78,7 +80,7 @@ namespace SeagullStorm
                 yield return null;
             }
             if (gm.CurrentState != GameState.Run) { Fail("Run capture blocked by state " + gm.CurrentState); yield break; }
-            ScreenCapture.CaptureScreenshot(Path.GetFullPath(Path.Combine(Application.dataPath,"../../qa-run.png")));
+            ScreenCapture.CaptureScreenshot(CapturePath("run"));
             yield return new WaitForSecondsRealtime(.5f);
             for (int extra = 0; gm.CurrentState == GameState.LevelUp && extra < 5; extra++)
             {
@@ -90,7 +92,7 @@ namespace SeagullStorm
             gm.EndRun(true);yield return new WaitForSecondsRealtime(1);
             if(!gm.ScoreSubmitted||gm.RunSubmissionPending||gm.Save.totalRuns<1){Fail("Offline completion failed: state="+gm.CurrentState+", submitted="+gm.ScoreSubmitted+", pending="+gm.RunSubmissionPending+", runs="+gm.Save.totalRuns);yield break;}
             if (!CheckFocus("PlayAgainButton", true)) yield break;
-            ScreenCapture.CaptureScreenshot(Path.GetFullPath(Path.Combine(Application.dataPath,"../../qa-gameover.png")));
+            ScreenCapture.CaptureScreenshot(CapturePath("gameover"));
             yield return new WaitForSecondsRealtime(.5f);
             int runs=gm.Save.totalRuns;gm.EndRun();
             if(gm.Save.totalRuns!=runs){Fail("Duplicate end rewarded twice");yield break;}
@@ -103,9 +105,17 @@ namespace SeagullStorm
             yield return new WaitForSecondsRealtime(.5f);
             if (!gm.Victory || gm.CurrentState != GameState.GameOver) { Fail("Boss death failed to trigger victory"); yield break; }
             foreach (var capture in new[]{"title","hub","sdk","pause","levelup","run","gameover"})
-                if (!File.Exists(Path.GetFullPath(Path.Combine(Application.dataPath,"../../qa-"+capture+".png")))) { Fail("Screenshot missing: "+capture); yield break; }
+                if (!File.Exists(CapturePath(capture))) { Fail("Screenshot missing: "+capture); yield break; }
             Debug.Log("[SEAGULL SMOKE] PASS: offline boot/hub/SDK panel, menu keyboard focus and unobstructed button raycasts, meta-upgrade affordability, start, pause, shell XP, level-up, weapon unlock, completion, duplicate-end guard replay reset and boss death/victory.");
             Application.Quit(0);
+        }
+        private static string CapturePath(string name)
+        {
+            var args = Environment.GetCommandLineArgs();
+            int option = Array.IndexOf(args, "-seagull-smoke-output");
+            string folder = option >= 0 && option + 1 < args.Length ? args[option + 1] : Path.GetFullPath(Path.Combine(Application.dataPath, "../../tmp"));
+            Directory.CreateDirectory(folder);
+            return Path.Combine(folder, "qa-" + name + ".png");
         }
         private static bool CheckFocus(string expected, bool raycast)
         {

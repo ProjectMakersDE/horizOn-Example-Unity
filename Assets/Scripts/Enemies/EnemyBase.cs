@@ -63,6 +63,7 @@ namespace SeagullStorm
         {
             if (!IsAlive) return;
             _currentHP -= dmg;
+            GetComponent<SeagullCutoutRig>()?.PlayHurt();
             CombatFeedback.Hit(transform.position, dmg);
             if (_sprite != null) _sprite.color = GameColors.Orange;
             CancelInvoke(nameof(ClearHitColor));
@@ -95,6 +96,7 @@ namespace SeagullStorm
             if (other.CompareTag("Player"))
             {
                 _damageCooldown = DamageInterval;
+                GetComponent<SeagullCutoutRig>()?.PlayAttack();
                 PlayerController.Instance?.TakeDamage(damage);
                 AudioManager.Instance?.PlayEnemyAttack();
             }

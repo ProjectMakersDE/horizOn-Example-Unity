@@ -82,6 +82,8 @@ Default survival time is 180 seconds, wave interval 15 seconds, first-wave count
 
 `Assets/Resources/SeagullArt/` contains nine shared PNG assets. Sprites have real RGBA transparency. The requested `google/gemini-2.5-flash-image` model was called through OpenRouter; its magenta backgrounds were keyed, cropped and padded for alpha. `ART-PROVENANCE.json` records model, prompts, processing, dimensions and final file hashes. The old atlases remain fallback assets. No API key is bundled.
 
+`Assets/Resources/SeagullArt/Cutout/` contains the accepted gull and crab animation parts, shared contact shadow and `rig.json` provenance. The gull head is clipped from the shared hero image. The moving torso, wings, feet, carapace, legs and claws are complete rebuilt vector surfaces exported to RGBA. `SeagullCutoutRig` reproduces the mockup's pivots and idle/walk/attack/hurt poses while keeping the original centered 32-unit sprite canvases and physics. A SortingGroup keeps each actor's parts together. Gameplay movement, weapon fire, contact attacks and damage drive the poses. Moving feet/legs and hop continue during upper-body attack poses. Overlapping auto-fire keeps an existing attack pulse running instead of restarting it. Pause freezes poses, and pooled crabs reset their effects on reuse. The original gull/crab renderer and legacy Animator are disabled once all parts load.
+
 ## Local validation
 
 ```bash
@@ -90,7 +92,9 @@ Unity -batchmode -nographics -projectPath . -executeMethod SeagullBuild.Build -l
 "Builds/Seagull Storm.app/Contents/MacOS/Seagull Storm" -seagull-smoke -screen-width 1280 -screen-height 720
 ```
 
-`SeagullBuild.Build` creates a Development macOS player using the installed Mono backend and restores the project's configured backend afterward. IL2CPP is not installed on the test Mac. The opt-in smoke player forces practice, uses a separate QA progress namespace, captures title/hub/SDK panel/pause/level-up/run/game-over screenshots under ignored `Builds/`, and checks meta-upgrade affordability, pause, XP/level-up, weapons, completion, duplicate-end protection, replay reset and boss victory. It never connects a backend.
+`SeagullBuild.Build` creates a Development macOS player using the installed Mono backend and restores the project's configured backend afterward. IL2CPP is not installed on the test Mac. The opt-in smoke player forces practice, uses a separate QA progress namespace, captures title/hub/SDK panel/pause/level-up/run/game-over screenshots in an ignored `tmp/` folder, and checks meta-upgrade affordability, pause, XP/level-up, weapons, completion, duplicate-end protection, replay reset and boss victory. It never connects a backend.
+
+The same native smoke checks the seven gull and nine crab joints, movement and facing, actual feather/contact attack poses, damage tint across parts, pause and pool reuse. `[CUTOUT SMOKE] PASS` confirms those runtime checks separately from the general gameplay smoke.
 
 Native QA results and remaining integration checks are recorded in `QA.md`. Real session authentication, validated rejection/evidence, cloud roundtrips, cosmetics, localization templates and email delivery require a dedicated project configuration and are not asserted from offline checks. This work does not close the broader TASK-615 integration gate.
 

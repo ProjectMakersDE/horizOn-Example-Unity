@@ -31,6 +31,22 @@ This test also exposed a legacy SpriteSwap selection graphic, which the final co
 
 The first IL2CPP build attempt failed because that native build module is absent on the Mac. `SeagullBuild.Build` temporarily selects the installed Mono backend and restores the project setting after the build. The retained URP/profile assets include the tested Unity 6000.5 import migration.
 
+## Cutout animation validation (2026-10-03)
+
+The accepted shared gull/crab cutout assets replace the two gameplay creatures with seven and nine independently rendered parts. Full-canvas center anchors remain 512/16 PPU and 256/8 PPU, both 32 world units. Original colliders, movement, health and SDK flows remain on the actor. One SortingGroup preserves each rig's internal order. Transparent edges use bilinear/clamp FullRect imports. All sixteen delivered PNG hashes match `Cutout/rig.json`.
+
+| Check | Result |
+|---|---|
+| Scene/prefab validation | All 159 checks passed in Unity 6000.5.0f1, pueue 1742 |
+| Final blended macOS Mono Development player | Build succeeded, pueue 1744 |
+| Native 1280 × 720 | Cutout and general gameplay smoke passed, pueue 1748, exit 0, 29.3 seconds |
+| Native 960 × 600 | Cutout and general gameplay smoke passed, pueue 1749, exit 0, 23.9 seconds |
+| Shared asset distribution/import settings | Sixteen hashes, 16/8 PPU, bilinear/clamp checked |
+
+`[CUTOUT SMOKE] PASS` checks all parts and the disabled monolithic renderer/legacy Animator, actual movement changing feet/legs, correct art direction, actual feather and crab-contact attacks, moving feet during auto-fire, actual damage and whole-rig tint, frozen poses during pause and crab pool reuse without lingering attack/hurt state or duplicate visuals. These checks run in the real standalone player with the offline QA namespace and no SDK configuration. The general gameplay smoke also passes its existing menu, upgrades, level-up, completion and replay gates. Screenshots are in ignored `tmp/native1280/` and `tmp/native960/`; logs and the player are in ignored `Builds/`. A `-seagull-smoke-output <folder>` argument selects the capture folder.
+
+The first native launch command failed before the process started because the pueue shell command did not preserve the executable path's spaces. The quoted replacement launch passed. Exact QA progress keys were restored and read back after both players exited. No task-owned editor/player remains. A separate TASK-909 editor and its import workers were left running. Local player checks do not add live-backend or physical-input evidence.
+
 ## Backend checks still required
 
 A dedicated QA project is required to test real guest/email/Apple sessions, board list/top/around/rank, a positive and rejected validated run, evidence upload failure/success, cloud absence/read/write and expired sessions, catalog/avatar updates, localization strings, gift redemption, feedback/log/crash collection and template email status. No production data was written and no email was sent during this task.

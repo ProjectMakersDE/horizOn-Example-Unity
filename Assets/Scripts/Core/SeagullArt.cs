@@ -35,6 +35,8 @@ namespace SeagullStorm
                 if (animator != null) animator.enabled = false;
                 var oldAnimation = GetComponent<PlayerAnimator>();
                 if (oldAnimation != null) oldAnimation.enabled = false;
+                if (GetComponent<PlayerController>() != null || GetComponent<EnemyCrab>() != null)
+                    if (GetComponent<SeagullCutoutRig>() == null) gameObject.AddComponent<SeagullCutoutRig>();
             }
         }
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
