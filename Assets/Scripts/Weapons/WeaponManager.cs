@@ -49,7 +49,7 @@ namespace SeagullStorm
             {
                 weapon.weaponId = weaponId;
                 _weapons[weaponId] = weapon;
-                GameManager.Instance?.RunState.activeWeapons.Add(weaponId);
+                if (GameManager.Instance != null && !GameManager.Instance.RunState.activeWeapons.Contains(weaponId)) GameManager.Instance.RunState.activeWeapons.Add(weaponId);
             }
         }
 
@@ -59,6 +59,11 @@ namespace SeagullStorm
             {
                 weapon.UpgradeLevel();
             }
+        }
+
+        public void IncreaseFireRate(string weaponId)
+        {
+            if (_weapons.TryGetValue(weaponId, out var weapon)) weapon.cooldown = Mathf.Max(0.12f, weapon.cooldown * 0.8f);
         }
 
         public bool HasWeapon(string weaponId)

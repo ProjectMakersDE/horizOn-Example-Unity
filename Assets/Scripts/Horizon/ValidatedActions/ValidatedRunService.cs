@@ -1,13 +1,11 @@
 using System.Threading.Tasks;
 using UnityEngine;
-#if HORIZON_VALIDATED_ACTIONS
 using System.Collections.Generic;
 using PM.horizOn.Cloud.Core;
 using PM.horizOn.Cloud.Enums;
 using PM.horizOn.Cloud.Manager;
 using PM.horizOn.Cloud.Objects.Network.Requests;
 using PM.horizOn.Cloud.Objects.Network.Responses;
-#endif
 
 namespace SeagullStorm
 {
@@ -24,6 +22,9 @@ namespace SeagullStorm
 
         /// <summary>Rank on the leaderboard after the run (accepted runs only).</summary>
         public long Rank;
+
+        /// <summary>Exact score returned by the accepted SDK submit.</summary>
+        public long Score;
 
         /// <summary>Best score of the player on the leaderboard (accepted runs only).</summary>
         public long BestScore;
@@ -47,11 +48,11 @@ namespace SeagullStorm
     /// <summary>
     /// Validated Actions for Seagull Storm: start a server-checked run and submit its result.
     ///
-    /// This assembly compiles against every horizOn SDK version. The real calls are only compiled
-    /// when <c>HORIZON_VALIDATED_ACTIONS</c> is defined, which the assembly definition does on its
-    /// own for <c>com.projectmakers.horizon</c> 1.9.0 or newer (the first SDK release with
-    /// Validated Actions, TASK-883). With an older SDK <see cref="IsSupported"/> is false and the
-    /// game keeps the plain leaderboard submit.
+    /// This assembly targets the pinned official horizOn SDK package. The real calls are available
+    /// in the pinned release. Historic version defines are no longer needed.
+    /// The first SDK release with
+    /// Validated Actions is 1.9.0 (TASK-883).
+    /// Requested validated runs never fall back to plain score submissions.
     /// </summary>
     public static class ValidatedRunService
     {
@@ -63,25 +64,23 @@ namespace SeagullStorm
         {
             get
             {
-#if HORIZON_VALIDATED_ACTIONS
                 return true;
-#else
-                return false;
-#endif
             }
         }
 
         /// <summary>Error code of the last failed start or submit, null after a success.</summary>
         public static string LastErrorCode { get; private set; }
+        private static RunEvidenceStatus _evidence = new RunEvidenceStatus();
+        public static string EvidenceStatus => _evidence.Status;
+        public static void Discard() { ValidatedActionsManager.Instance.DiscardRun(); }
 
         // Static state survives "Enter Play Mode" without a domain reload; start clean every time.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
         {
             LastErrorCode = null;
-#if HORIZON_VALIDATED_ACTIONS
             _evidenceEventsSubscribed = false;
-#endif
+            _evidence = new RunEvidenceStatus();
         }
 
         /// <summary>
@@ -90,12 +89,7 @@ namespace SeagullStorm
         /// <returns>The server seed of the run, or null when no run was started (see <see cref="LastErrorCode"/>)</returns>
         public static Task<int?> StartRun(string leaderboardKey)
         {
-#if HORIZON_VALIDATED_ACTIONS
             return StartRunAsync(leaderboardKey);
-#else
-            LastErrorCode = SdkTooOld;
-            return Task.FromResult<int?>(null);
-#endif
         }
 
         /// <summary>
@@ -107,19 +101,14 @@ namespace SeagullStorm
         /// </summary>
         public static Task<ValidatedRunOutcome> Submit(long score, byte[] inputLog, string stage, string coinsKey, long coinsEarned)
         {
-#if HORIZON_VALIDATED_ACTIONS
             return SubmitAsync(score, inputLog, stage, coinsKey, coinsEarned);
-#else
-            LastErrorCode = SdkTooOld;
-            return Task.FromResult(new ValidatedRunOutcome { Accepted = false, ErrorCode = SdkTooOld });
-#endif
         }
 
-#if HORIZON_VALIDATED_ACTIONS
         private static bool _evidenceEventsSubscribed;
 
         private static async Task<int?> StartRunAsync(string leaderboardKey)
         {
+            _evidence.Begin(null);
             SubscribeEvidenceEvents();
 
             var manager = ValidatedActionsManager.Instance;
@@ -135,6 +124,7 @@ namespace SeagullStorm
             }
 
             LastErrorCode = null;
+            _evidence.Begin(run.runId);
             return run.seed;
         }
 
@@ -158,10 +148,12 @@ namespace SeagullStorm
             }
 
             LastErrorCode = null;
+            _evidence.Requested(result.evidence.required);
             var outcome = new ValidatedRunOutcome
             {
                 Accepted = true,
                 Rank = result.rank,
+                Score = result.score,
                 BestScore = result.bestScore,
                 IsNewHighScore = result.isNewHighScore,
                 EvidenceRequested = result.evidence.required
@@ -187,10 +179,9 @@ namespace SeagullStorm
             _evidenceEventsSubscribed = true;
 
             HorizonApp.Events.Subscribe<EvidenceUploadResult>(EventKeys.ValidatedEvidenceUploaded,
-                uploaded => Debug.Log($"[SeagullStorm] Input log uploaded as evidence: {uploaded.bytes} bytes"));
+                uploaded => { _evidence.Resolve(uploaded.runId, "Evidence uploaded (" + uploaded.bytes + " bytes)"); Debug.Log("[SeagullStorm] " + EvidenceStatus); });
             HorizonApp.Events.Subscribe<ValidatedEvidenceFailure>(EventKeys.ValidatedEvidenceUploadFailed,
-                failure => Debug.LogWarning($"[SeagullStorm] Evidence upload failed: {failure.code} (the run stays accepted)"));
+                failure => { _evidence.Resolve(failure.runId, "Evidence upload failed: " + failure.code + " • accepted score retained"); Debug.LogWarning("[SeagullStorm] " + EvidenceStatus); });
         }
-#endif
     }
 }

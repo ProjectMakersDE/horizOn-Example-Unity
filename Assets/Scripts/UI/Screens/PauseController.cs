@@ -25,6 +25,7 @@ namespace SeagullStorm
             if (newsButton != null) newsButton.onClick.AddListener(OnNews);
             if (feedbackButton != null) feedbackButton.onClick.AddListener(OnFeedback);
             if (quitButton != null) quitButton.onClick.AddListener(OnQuit);
+            SeagullInterface.FocusControl(resumeButton);
         }
 
         private void OnDisable()
@@ -76,7 +77,8 @@ namespace SeagullStorm
         private void OnQuit()
         {
             // Quit run = trigger game over
-            PlayerController.Instance?.TakeDamage(99999);
+            GameManager.Instance.ChangeState(GameState.Run);
+            GameManager.Instance.EndRun();
         }
 
         private void Update()

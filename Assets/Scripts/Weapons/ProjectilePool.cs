@@ -52,7 +52,7 @@ namespace SeagullStorm
         public void ReturnAll()
         {
             foreach (Transform child in transform)
-                child.gameObject.SetActive(false);
+                if (child.gameObject.activeSelf) ReturnProjectile(child.GetComponent<Projectile>());
         }
     }
 }

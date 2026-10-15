@@ -11,12 +11,6 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [
-        {
-            "name": "com.projectmakers.horizon",
-            "expression": "1.9.0",
-            "define": "HORIZON_VALIDATED_ACTIONS"
-        }
-    ],
+    "versionDefines": [],
     "noEngineReferences": false
 }

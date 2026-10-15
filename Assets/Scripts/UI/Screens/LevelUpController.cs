@@ -38,22 +38,39 @@ namespace SeagullStorm
                 foreach (Transform child in choiceContainer) Destroy(child.gameObject);
             }
 
+            var layout = choiceContainer != null ? choiceContainer.GetComponent<HorizontalLayoutGroup>() : null;
+            if (layout != null) { layout.spacing = 12; layout.childControlWidth = true; layout.childForceExpandWidth = true; }
+            Button firstChoice = null;
             for (int i = 0; i < choices.Count; i++)
             {
                 var choice = choices[i];
                 if (choiceCardPrefab == null || choiceContainer == null) continue;
 
                 var card = Instantiate(choiceCardPrefab, choiceContainer);
+                SeagullInterface.StyleLegacySubtree(card);
                 var nameText = card.transform.Find("NameText")?.GetComponent<TMP_Text>();
                 var descText = card.transform.Find("DescText")?.GetComponent<TMP_Text>();
                 var button = card.GetComponent<Button>();
+                if (firstChoice == null) firstChoice = button;
 
-                if (nameText != null) nameText.text = choice.displayName;
-                if (descText != null) descText.text = choice.description;
+                if (nameText != null)
+                {
+                    nameText.text = choice.displayName;
+                    nameText.fontSizeMin = 8; nameText.fontSizeMax = 12;
+                    nameText.alignment = TextAlignmentOptions.Center;
+                }
+                if (descText != null)
+                {
+                    descText.text = choice.description;
+                    descText.fontSizeMin = 6; descText.fontSizeMax = 9;
+                    descText.fontStyle = FontStyles.Normal;
+                    descText.alignment = TextAlignmentOptions.Center;
+                }
 
                 int idx = i;
                 if (button != null) button.onClick.AddListener(() => OnSelect(idx));
             }
+            SeagullInterface.FocusControl(firstChoice);
         }
 
         private void OnSelect(int index)

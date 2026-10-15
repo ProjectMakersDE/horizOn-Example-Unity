@@ -4,9 +4,10 @@ using UnityEngine;
 namespace SeagullStorm
 {
     /// <summary>
-    /// Compact input log of one run for Validated Actions. The server keeps only its SHA-256 at
-    /// submit time and may ask for the raw bytes later (evidence), so the log must describe the run
-    /// well enough to replay it and must stay within the 32 KB evidence limit.
+    /// Bounded input evidence for Validated Actions. Submission sends its SHA-256, and the server
+    /// may request the raw bytes separately. It records seed, input changes, ticks and choices,
+    /// but not complete engine physics or balance/configuration state. This format does not
+    /// establish authoritative replay verification and must stay within the 32 KB evidence limit.
     ///
     /// Format v1 (little endian, same layout as the Godot Seagull Storm):
     /// <list type="bullet">
@@ -17,7 +18,7 @@ namespace SeagullStorm
     /// <item>0xFF run end</item>
     /// </list>
     /// A physics tick is one FixedUpdate while the run is playing (not paused, no level up choice).
-    /// Only direction changes are written, so a three minute run stays a few kilobytes.
+    /// Only direction changes are written, so a typical three-minute run uses a few kilobytes.
     /// </summary>
     public class RunInputLog
     {

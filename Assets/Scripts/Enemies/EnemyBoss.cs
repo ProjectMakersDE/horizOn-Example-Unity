@@ -13,10 +13,8 @@ namespace SeagullStorm
             // Boss kill ends the run as a victory
             if (GameManager.Instance != null)
             {
-                GameManager.Instance.EndRun();
-                AudioManager.Instance?.PlayGameOver();
-                AudioManager.Instance?.PlayMenuMusic();
-                GameManager.Instance.ChangeState(GameState.GameOver);
+                GameManager.Instance.EndRun(true);
+
             }
         }
     }

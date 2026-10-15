@@ -58,7 +58,7 @@ namespace SeagullStorm
                 else
                 {
                     // End run without boss
-                    PlayerController.Instance?.TakeDamage(99999);
+                    GameManager.Instance.EndRun(true);
                 }
                 return;
             }
@@ -75,7 +75,7 @@ namespace SeagullStorm
 
         private void SpawnWave(int waveNumber, GameConfig config)
         {
-            int enemyCount = Mathf.RoundToInt(config.WaveEnemyCountBase * Mathf.Pow(config.WaveEnemyCountGrowth, waveNumber - 1));
+            int enemyCount = Mathf.Clamp(Mathf.RoundToInt(config.WaveEnemyCountBase * Mathf.Pow(config.WaveEnemyCountGrowth, waveNumber - 1)), 1, 60);
             var playerTransform = PlayerController.Instance?.transform;
 
             for (int i = 0; i < enemyCount; i++)
@@ -105,8 +105,8 @@ namespace SeagullStorm
         {
             Vector2 playerPos = GameManager.Instance?.RunState.playerPosition ?? Vector2.zero;
             float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-            float dist = Random.Range(300f, 400f);
-            return new Vector3(playerPos.x + Mathf.Cos(angle) * dist, playerPos.y + Mathf.Sin(angle) * dist, 0);
+            float dist = Random.Range(265f, 325f);
+            return new Vector3(Mathf.Clamp(playerPos.x + Mathf.Cos(angle) * dist, -520f, 520f), Mathf.Clamp(playerPos.y + Mathf.Sin(angle) * dist, -390f, 390f), 0);
         }
     }
 }

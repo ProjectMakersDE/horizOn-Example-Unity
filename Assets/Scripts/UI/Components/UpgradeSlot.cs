@@ -33,7 +33,7 @@ namespace SeagullStorm
                 if (costText != null) costText.text = $"{costs[level]}";
                 if (buyButton != null)
                 {
-                    buyButton.interactable = true;
+                    buyButton.interactable = (GameManager.Instance?.Save.coins ?? 0) >= costs[level];
                     buyButton.onClick.RemoveAllListeners();
                     buyButton.onClick.AddListener(OnBuy);
                 }

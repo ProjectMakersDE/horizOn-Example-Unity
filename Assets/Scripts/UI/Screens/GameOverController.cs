@@ -28,6 +28,7 @@ namespace SeagullStorm
             if (hubButton != null) hubButton.onClick.AddListener(OnHub);
 
             ShowStats();
+            SeagullInterface.FocusControl(playAgainButton);
         }
 
         private void OnDisable()
@@ -38,6 +39,7 @@ namespace SeagullStorm
 
         private async void ShowStats()
         {
+            int runGeneration = GameManager.Instance?.RunGeneration ?? -1;
             var run = GameManager.Instance?.RunState;
             var save = GameManager.Instance?.Save;
             if (run == null || save == null) return;
@@ -53,8 +55,18 @@ namespace SeagullStorm
                 validationText.text = "";
 
             // Wait for score submission to complete before fetching rank
+            if (rankText != null) rankText.text = "Waiting for score result…";
+            if (playAgainButton != null) playAgainButton.interactable = false;
             while (GameManager.Instance != null && !GameManager.Instance.ScoreSubmitted)
-                await Task.Yield();
+            {
+                if (!isActiveAndEnabled || GameManager.Instance?.RunGeneration != runGeneration) return;
+                await Task.Delay(50);
+            }
+            if (!isActiveAndEnabled || GameManager.Instance?.RunGeneration != runGeneration) return;
+            if (playAgainButton != null) playAgainButton.interactable = !GameManager.Instance.RunSubmissionPending;
+            // The result canvas activates before rewards are calculated; refresh after that lifecycle completes.
+            if (bestScoreText != null) bestScoreText.text = $"Best: {save.highscore:N0}";
+            if (coinsEarnedText != null) coinsEarnedText.text = $"Coins: +{run.coinsEarned}";
 
             // Validated run: the submit result already carries the rank (or the rejection reason).
             var validated = GameManager.Instance?.LastValidatedOutcome;
@@ -68,6 +80,7 @@ namespace SeagullStorm
             try
             {
                 var rank = await HorizonManager.Instance.GetRank();
+                if (!isActiveAndEnabled || GameManager.Instance?.RunGeneration != runGeneration) return;
                 if (rank != null)
                 {
                     if (rankText != null)
@@ -99,14 +112,15 @@ namespace SeagullStorm
                 return;
             }
 
+            if (scoreText != null) scoreText.text = $"Accepted score: {outcome.Score:N0}";
             if (rankText != null)
-                rankText.text = outcome.Rank > 0 ? $"Verified Rank: #{outcome.Rank}" : "Verified run";
+                rankText.text = outcome.Rank > 0 ? $"Server-accepted rank: #{outcome.Rank}" : "Server accepted score";
             if (bestScoreText != null && outcome.Rank > 0)
                 bestScoreText.text = $"Best: {System.Math.Max(save.highscore, outcome.BestScore):N0} (#{outcome.Rank})";
             if (coinsEarnedText != null && outcome.CoinsReported && outcome.CoinsCredited < run.coinsEarned)
                 coinsEarnedText.text = $"Coins: +{run.coinsEarned} ({outcome.CoinsCredited} verified)";
             if (validationText != null)
-                validationText.text = outcome.IsNewHighScore ? "New verified best!" : "Run verified by the server";
+                validationText.text = outcome.IsNewHighScore ? "New accepted best!" : "Score accepted by the server";
         }
 
         /// <summary>
@@ -117,6 +131,9 @@ namespace SeagullStorm
         {
             switch (code)
             {
+                case "INCOMPLETE_EVIDENCE": return "Not ranked: input evidence exceeded its size limit";
+                case "OFFLINE_PRACTICE": return "Practice run • progress saved on this device";
+                case "VALIDATION_UNAVAILABLE": return "Practice run • validated ticket unavailable";
                 case "DURATION_TOO_SHORT":
                     return "Not ranked: that run was too short to count.";
                 case "SCORE_ABOVE_MAX":
@@ -166,6 +183,13 @@ namespace SeagullStorm
                 default:
                     return "Not ranked: the run could not be verified (offline?).";
             }
+        }
+
+        private void Update()
+        {
+            if (validationText != null && GameManager.Instance?.LastValidatedOutcome?.Accepted == true) validationText.text = ValidatedRunService.EvidenceStatus;
+            if (playAgainButton != null && GameManager.Instance != null)
+                playAgainButton.interactable = !GameManager.Instance.RunSubmissionPending;
         }
 
         private void OnPlayAgain()

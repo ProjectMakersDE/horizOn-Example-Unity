@@ -12,7 +12,9 @@ namespace SeagullStorm
         private Rigidbody2D _rb;
         private SpriteRenderer _sprite;
         private Vector2 _moveInput;
-        private float _baseSpeed = 200f;
+        private float _baseSpeed = 145f;
+        private float _invulnerableUntil;
+        private void OnEnable() { _invulnerableUntil = 0; _moveInput = Vector2.zero; if (_sprite != null) _sprite.color = Color.white; }
 
         public Vector2 MoveDirection => _moveInput.normalized;
         public Vector2 LastNonZeroDirection { get; private set; } = Vector2.right;
@@ -46,14 +48,22 @@ namespace SeagullStorm
 
             float speedMult = GameManager.Instance.GetSpeedMultiplier() * GameManager.Instance.RunState.moveSpeedMultiplier;
             Vector2 velocity = _moveInput.normalized * _baseSpeed * speedMult * Time.fixedDeltaTime;
-            _rb.MovePosition(_rb.position + velocity);
+            Vector2 next = _rb.position + velocity;
+            next.x = Mathf.Clamp(next.x, -480f, 480f);
+            next.y = Mathf.Clamp(next.y, -350f, 350f);
+            _rb.MovePosition(next);
             GameManager.Instance.RunState.playerPosition = _rb.position;
         }
 
         public void TakeDamage(int amount)
         {
+            if (GameManager.Instance == null || GameManager.Instance.CurrentState != GameState.Run || Time.time < _invulnerableUntil) return;
+            _invulnerableUntil = Time.time + 0.65f;
             var run = GameManager.Instance.RunState;
             run.playerHP -= amount;
+            GetComponent<SeagullCutoutRig>()?.PlayHurt();
+            CombatFeedback.Hit(transform.position, amount, true);
+            StartCoroutine(HitFlash());
             AudioManager.Instance?.PlayPlayerHit();
 
             HorizonManager.Instance?.SetCrashCustomKey("hp", run.playerHP.ToString());
@@ -62,10 +72,18 @@ namespace SeagullStorm
             {
                 run.playerHP = 0;
                 GameManager.Instance.EndRun();
-                AudioManager.Instance?.PlayGameOver();
-                AudioManager.Instance?.PlayMenuMusic();
-                GameManager.Instance.ChangeState(GameState.GameOver);
+
             }
+        }
+
+        private System.Collections.IEnumerator HitFlash()
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                _sprite.color = i % 2 == 0 ? GameColors.Orange : Color.white;
+                yield return new WaitForSeconds(0.1f);
+            }
+            _sprite.color = Color.white;
         }
 
         public void Heal(float amount)
