@@ -16,6 +16,7 @@ namespace SeagullStorm
         private Canvas _canvas;
         private GameObject _home, _demo;
         private SeagullPlayerValuesDemo _valuesDemo;
+        private SeagullStatisticsDemo _statisticsDemo;
         private TMP_Text _stats, _connection, _output, _runStatus;
         private TMP_InputField _name, _email, _password, _code, _feedback, _recipient, _template;
         private Button _play, _demoButton;
@@ -121,8 +122,8 @@ namespace SeagullStorm
             _demo=Panel(_canvas.transform,"SDK demos",new Vector2(1210,630),Vector2.zero,new Color32(0x1C,0x1C,0x1C,255));
             Text(_demo.transform,"horizOn  /  SDK DEMOS",new Vector2(780,40),new Vector2(-166,265),26,GameColors.Orange,FontStyles.Bold);
             Button(_demo.transform,"CLOSE",new Vector2(125,40),new Vector2(505,265),ShowHome);
-            string[] buttons={"Top 10","Around me","My rank","Next board","News","Cloud save","Profile","Avatar","Apply avatar","EN / DE","Server state","Email demo","Player values"};
-            Action[] actions={ ()=>{_page="top";Run(ShowLeaderboard);},()=>{_page="around";Run(ShowLeaderboard);},()=>Run(ShowRank),()=>Run(NextBoard),()=>Run(ShowNews),()=>Run(SyncSave),()=>Run(ShowProfile),()=>Run(NextAvatar),()=>Run(ApplyAvatar),()=>Run(LoadLocalization),()=>Run(ShowState),()=>ShowEmail(),ShowPlayerValues };
+            string[] buttons={"Top 10","Around me","My rank","Next board","News","Cloud save","Profile","Avatar","Apply avatar","EN / DE","Server state","Email demo","Player values","Statistics"};
+            Action[] actions={ ()=>{_page="top";Run(ShowLeaderboard);},()=>{_page="around";Run(ShowLeaderboard);},()=>Run(ShowRank),()=>Run(NextBoard),()=>Run(ShowNews),()=>Run(SyncSave),()=>Run(ShowProfile),()=>Run(NextAvatar),()=>Run(ApplyAvatar),()=>Run(LoadLocalization),()=>Run(ShowState),()=>ShowEmail(),ShowPlayerValues,ShowStatistics };
             for(int i=0;i<buttons.Length;i++) Button(_demo.transform,buttons[i],new Vector2(148,42),new Vector2(-502+(i%7)*166,204-(i/7)*54),actions[i]);
             _output=Text(_demo.transform,"Sign in to use online demos. Offline progress stays on this device.",new Vector2(1090,230),new Vector2(0,-11),18,GameColors.LightText);
             _output.alignment=TextAlignmentOptions.TopLeft; _output.richText=false;
@@ -142,6 +143,16 @@ namespace SeagullStorm
             });
             _demo.SetActive(false);
             _valuesDemo.Show();
+        }
+        private void ShowStatistics()
+        {
+            _statisticsDemo ??= new SeagullStatisticsDemo(_canvas.transform, () =>
+            {
+                _demo.SetActive(true);
+                FocusControl(_demo.transform.Find("Statistics")?.GetComponent<Button>());
+            });
+            _demo.SetActive(false);
+            _statisticsDemo.Show();
         }
         private void ShowEmail()
         {
@@ -211,12 +222,12 @@ namespace SeagullStorm
             if(!_title&&GameManager.Instance!=null)
             {
                 var state = GameManager.Instance.CurrentState;
-                bool hub=state==GameState.Hub;_home.SetActive(hub);if(!hub){_demo.SetActive(false);_valuesDemo?.Hide();}
+                bool hub=state==GameState.Hub;_home.SetActive(hub);if(!hub){_demo.SetActive(false);_valuesDemo?.Hide();_statisticsDemo?.Hide();}
                 bool enteredState = _focusedState != state;
                 _focusedState = state;
                 bool wasReady = _play.interactable;
                 _play.interactable = GameManager.Instance.ProgressLoaded && !GameManager.Instance.RunSubmissionPending && !GameManager.Instance.IsStartingRun;
-                bool modal = _demo.activeSelf || (_valuesDemo?.IsVisible == true);
+                bool modal = _demo.activeSelf || (_valuesDemo?.IsVisible == true) || (_statisticsDemo?.IsVisible == true);
                 _home.GetComponent<CanvasGroup>().interactable = !modal;
                 // Loading may clear selection when Start becomes disabled. Focus only when
                 // entering the ready hub, leaving all later user navigation untouched.

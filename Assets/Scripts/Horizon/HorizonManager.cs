@@ -76,7 +76,9 @@ namespace SeagullStorm
             }
             finally { _authLock.Release(); }
         }
-        public Task<bool> SignUpGuest(string name) => Auth(() => UserManager.Instance.SignUpAnonymous(name));
+        public Task<bool> SignUpGuest(string name) => Auth(() => UserManager.Instance.IsSignedIn ? Task.FromResult(true) :
+            GuestIdentityGuard.Run(HorizonApp.Network.GetApiKey(), UserManager.Instance.HasCachedAnonymousToken(),
+                () => UserManager.Instance.RestoreAnonymousSession(), () => UserManager.Instance.SignUpAnonymous(name)));
         public Task<bool> SignInEmail(string email, string pw) => Auth(() => UserManager.Instance.SignInEmail(email, pw));
         public Task<bool> SignUpEmail(string email, string pw, string name) => Auth(() => UserManager.Instance.SignUpEmail(email, pw, name));
         public Task<bool> SignInGoogle(string code, string redirectUri = "") => Auth(() => UserManager.Instance.SignInGoogle(code, redirectUri));
@@ -85,9 +87,11 @@ namespace SeagullStorm
         public Task<bool> RestoreSession() => Auth(async () =>
         {
             int generation = Generation;
+            string project = HorizonApp.Network.GetApiKey();
+            GuestIdentityGuard.Protect(project, UserManager.Instance.HasCachedAnonymousToken());
             if (await UserManager.Instance.CheckAuth()) return true;
             if (generation != Generation) return false;
-            return await UserManager.Instance.RestoreAnonymousSession();
+            return await GuestIdentityGuard.Run(project, UserManager.Instance.HasCachedAnonymousToken(), () => UserManager.Instance.RestoreAnonymousSession());
         });
         public void SignOut()
         {
@@ -155,6 +159,8 @@ namespace SeagullStorm
         public Task<PlayerValuesOffersResult> GetValueOffers() => SessionCall(() => PlayerValuesManager.Instance.GetOffers(GetUserId()));
         public Task<PlayerValuesResult> PurchaseValueOffer(string key, string operationId) => SessionCall(() => PlayerValuesManager.Instance.Purchase(GetUserId(), key, operationId));
         public Task<PlayerValuesResult> AdjustValue(string key, long amount, string reason, string operationId) => SessionCall(() => PlayerValuesManager.Instance.Adjust(GetUserId(), key, amount, reason, operationId));
+        public Task<StatisticsSnapshot> GetStatistics() => SessionCall(() => StatisticsManager.Instance.GetStatistics());
+        public Task<StatisticsSnapshot> UpdateStatistics(IList<StatisticUpdate> updates, string operationId) => SessionCall(() => StatisticsManager.Instance.UpdateStatistics(updates, operationId));
         public bool ValidatedActionsSupported => ValidatedRunService.IsSupported;
         public string LastValidatedErrorCode => ValidatedRunService.LastErrorCode;
         public Task<int?> StartValidatedRun(string board) => SessionCall(() => ValidatedRunService.StartRun(board));

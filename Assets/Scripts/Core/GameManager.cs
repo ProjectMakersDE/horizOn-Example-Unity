@@ -50,6 +50,7 @@ namespace SeagullStorm
         private bool _validatedRun;
         private string _validatedStartError;
         private bool _startingRun;
+        private StatisticsIntentStore _statisticsRun;
 
         /// <summary>Result of the last validated submit, null when the run used the plain submit.</summary>
         public ValidatedRunOutcome LastValidatedOutcome { get; private set; }
@@ -153,6 +154,7 @@ namespace SeagullStorm
             float maxHP = Config.UpgradeHpValues[
                 Mathf.Clamp(Save.upgrades.hp, 0, Config.UpgradeHpValues.Length - 1)];
             RunState.Reset(maxHP, Config.RunDurationSeconds);
+            _statisticsRun = HorizonManager.Instance?.Online == true ? StatisticsIntentStore.Current() : null;
 
             // Reset player position
             if (player != null) player.transform.position = Vector3.zero;
@@ -182,6 +184,11 @@ namespace SeagullStorm
             AudioManager.Instance?.PlayGameOver();
             AudioManager.Instance?.PlayMenuMusic();
             var run = RunState;
+            // Freeze one completed online session locally; the statistics panel sends it explicitly.
+            // Later runs aggregate separately while an earlier immutable request is unresolved.
+            try { _statisticsRun?.CompleteRun(run.kills, run.score); }
+            catch (Exception error) { Debug.LogWarning("Statistics intent could not be saved: " + error.Message); }
+            _statisticsRun = null;
             run.coinsEarned = run.score / Mathf.Max(1, Config.CoinDivisor);
             Save.coins += run.coinsEarned;
             Save.totalRuns++;
