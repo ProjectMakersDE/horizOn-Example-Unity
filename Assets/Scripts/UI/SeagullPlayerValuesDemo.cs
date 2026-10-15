@@ -4,6 +4,8 @@ using System.Text;
 using System.Threading.Tasks;
 using PM.horizOn.Cloud.Core;
 using PM.horizOn.Cloud.Manager;
+using PM.horizOn.Cloud.Enums;
+using PM.horizOn.Cloud.Service;
 using PM.horizOn.Cloud.Objects.Network.Responses;
 using TMPro;
 using UnityEngine;
@@ -19,7 +21,7 @@ namespace SeagullStorm
         private PlayerValueIntentStore _store;
         private PlayerValueOffer[] _offers = Array.Empty<PlayerValueOffer>();
         private PlayerValuesState _state;
-        private string _scope;
+        private string _scope, _host;
         private int _offerIndex, _valueIndex, _epoch;
         private long _offerDefinition = -1;
         private bool _busy;
@@ -43,12 +45,13 @@ namespace SeagullStorm
         }
 
         private static PlayerValueIntentStore CurrentStore() => new PlayerValueIntentStore(
-            HorizonApp.Network.GetActiveHost(), HorizonApp.Network.GetApiKey(), HorizonManager.Instance.GetUserId());
+            HorizonApp.Network.GetActiveHost(), HorizonApp.Network.GetApiKey(), HorizonManager.Instance.GetUserId(), HorizonConfig.Load()?.Hosts);
 
         public void Show()
         {
             _epoch++; _panel.SetActive(true);
             _store = HorizonManager.Instance.Online ? CurrentStore() : null; _scope = _store?.StorageKey;
+            _host = HorizonApp.Network.GetActiveHost();
             _state = null; _offers = Array.Empty<PlayerValueOffer>(); _offerDefinition = -1;
             Render("Read balances and offers before a new action. All requests are explicit.");
             FocusControl(_panel.transform.Find("Read balances")?.GetComponent<UnityEngine.UI.Button>());
@@ -56,13 +59,13 @@ namespace SeagullStorm
         public void Hide() { _epoch++; if (_panel != null) _panel.SetActive(false); }
 
         private bool IsCurrent(int generation, string user, int epoch) => IsVisible && _epoch == epoch &&
-            HorizonManager.Instance.IsCurrent(generation, user) && CurrentStore().StorageKey == _scope;
+            HorizonManager.Instance.IsCurrent(generation, user) && CurrentStore().StorageKey == _scope && HorizonApp.Network.GetActiveHost() == _host;
 
         private async void Run(Func<Task> action)
         {
             if (_busy) return;
             if (!HorizonManager.Instance.Online) { Render("Sign in with your own project. Practice coins remain local."); return; }
-            if (_store == null || CurrentStore().StorageKey != _scope) { Render("Project changed. Close and reopen this panel before another request."); return; }
+            if (_store == null || CurrentStore().StorageKey != _scope || HorizonApp.Network.GetActiveHost() != _host) { Render("Project or regional host changed. Close and reopen this panel before another request."); return; }
             int epoch = _epoch;
             _busy = true;
             try { await action(); }
@@ -90,10 +93,23 @@ namespace SeagullStorm
             { Render("An earlier intent exists. Reconcile it or use Retry pending; a new ID is never substituted."); return; }
             if (!PlayerValuesManager.Instance.HasServerClock || PlayerValuesManager.Instance.CurrentState == null || _state == null)
             { Render("Read current balances and offers first."); return; }
-            if (!adjust && PlayerValuesManager.Instance.CurrentOffers?.definitionVersion != _offerDefinition)
-            { _offers = Array.Empty<PlayerValueOffer>(); _offerDefinition = -1; Render("Offer catalogue changed. Read balances and offers again before buying."); return; }
             if (adjust ? _state.values.Length == 0 : _offers.Length == 0)
             { Render(adjust ? "No value is configured." : "No active offer is configured."); return; }
+            if (!adjust)
+            {
+                var selected = _offers[_offerIndex % _offers.Length];
+                string displayed = JsonUtility.ToJson(selected); long displayedVersion = _offerDefinition;
+                var manager = HorizonManager.Instance; int generation = manager.Generation, epoch = _epoch; string user = manager.GetUserId();
+                var fresh = await manager.GetValueOffers();
+                if (!IsCurrent(generation, user, epoch)) return;
+                if (fresh?.IsSuccess != true) { Render("Fresh offer lookup failed. No purchase was sent."); return; }
+                _offers = fresh.Data.offers.Where(o => o != null && o.active).ToArray();
+                _offerDefinition = fresh.Data.definitionVersion;
+                int found = Array.FindIndex(_offers, offer => offer.key == selected.key);
+                _offerIndex = found >= 0 ? found : 0;
+                if (found < 0 || displayedVersion != _offerDefinition || JsonUtility.ToJson(_offers[found]) != displayed)
+                { Render("Offers changed. Review the refreshed costs and rewards, then explicitly choose Buy offer again. No purchase was sent."); return; }
+            }
             var intent = new PlayerValueIntent { userId = HorizonManager.Instance.GetUserId(), kind = adjust ? "adjust" : "purchase",
                 operationId = PlayerValuesManager.Instance.CreateOperationId(), amount = adjust ? 1 : 0,
                 valueKey = adjust ? _state.values[_valueIndex % _state.values.Length].key : null, reason = adjust ? "example-explicit-adjustment" : null,
@@ -107,9 +123,22 @@ namespace SeagullStorm
             if (!_store.TryRead(out var intent) || intent == null)
             { Render("No valid pending action. Unreadable intents are protected until reconciliation."); return; }
             var manager = HorizonManager.Instance; int generation = manager.Generation, epoch = _epoch; string user = manager.GetUserId();
-            var result = intent.kind == "purchase"
-                ? await manager.PurchaseValueOffer(intent.offerKey, intent.operationId)
-                : await manager.AdjustValue(intent.valueKey, intent.amount, intent.reason, intent.operationId);
+            int series = _store.MarkAttempt(intent.operationId), transportAttempts = 0;
+            string url = _host + "/api/v1/app/player-values/" + (intent.kind == "purchase" ? "purchase" : "adjust");
+            bool armed = false;
+            Action<NetworkRequestData> started = data => { if (armed && data?.Method == "POST" && data.Url == url) transportAttempts++; };
+            // Subscribe replays a cached event synchronously; it is deliberately excluded before arming.
+            var events = HorizonApp.Events;
+            events.Subscribe(EventKeys.NetworkRequestStarted, started);
+            PlayerValuesResult result;
+            try
+            {
+                armed = true;
+                result = intent.kind == "purchase"
+                    ? await manager.PurchaseValueOffer(intent.offerKey, intent.operationId)
+                    : await manager.AdjustValue(intent.valueKey, intent.amount, intent.reason, intent.operationId);
+            }
+            finally { armed = false; events.Unsubscribe(EventKeys.NetworkRequestStarted, started); }
             if (!IsCurrent(generation, user, epoch)) return;
             if (result?.State != null)
             {
@@ -117,7 +146,10 @@ namespace SeagullStorm
                 if (_state.definitionVersion != _offerDefinition) { _offers = Array.Empty<PlayerValueOffer>(); _offerDefinition = -1; }
             }
             if (result?.IsSuccess == true) _store.Confirm(intent.operationId);
+            bool unbooked = result?.IsSuccess == false && _store.RejectFirstUnbooked(intent.operationId,
+                series, transportAttempts, result.ErrorCode, result.State != null);
             Render(result?.IsSuccess == true ? "Confirmed by the server. Practice coins are unchanged." :
+                unbooked ? result.ErrorCode + ". Server confirmed no booking on the only transport attempt. Review the state before a new explicit action." :
                 (result?.ErrorCode ?? "Uncertain outcome") + ". Pending intent kept. OPERATION_EXPIRED requires reconciliation; never retry with a new ID.");
         }
 

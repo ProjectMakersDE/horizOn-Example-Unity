@@ -30,6 +30,8 @@ namespace SeagullStorm
             if (gm==null || !gm.ProgressLoaded || HorizonManager.Instance.Online) { Fail("Offline hub failed");yield break; }
             try { PlayerValueIntentSmoke.Check(); }
             catch (Exception error) { Fail("Player value intent protection failed: " + error.Message); yield break; }
+            try { StatisticsIntentSmoke.Check(); }
+            catch (Exception error) { Fail("Statistics intent protection failed: " + error.Message); yield break; }
             if (!CheckFocus("START RUN", true)) yield break;
             ScreenCapture.CaptureScreenshot(CapturePath("hub"));
             yield return new WaitForSecondsRealtime(.5f);
@@ -50,6 +52,16 @@ namespace SeagullStorm
             GameObject.Find("BACK")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
             yield return null; // Re-enabled uGUI controls register for raycasting on the next rendered frame.
             if (!CheckFocus("Player values", true)) yield break;
+            GameObject.Find("Statistics")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+            yield return new WaitForSecondsRealtime(.3f);
+            if (!CheckFocus("Read snapshot", true)) yield break;
+            GameObject.Find("Read snapshot")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+            if (HorizonManager.Instance.Online) { Fail("Statistics demo left offline practice"); yield break; }
+            ScreenCapture.CaptureScreenshot(CapturePath("statistics"));
+            yield return new WaitForSecondsRealtime(.5f);
+            GameObject.Find("BACK")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+            yield return null;
+            if (!CheckFocus("Statistics", true)) yield break;
             gm.ProgressLoaded = false;
             yield return null;
             GameObject.Find("Seagull interface/horizOn UI/SDK demos/CLOSE")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
@@ -116,7 +128,7 @@ namespace SeagullStorm
             boss.TakeHit(9999);
             yield return new WaitForSecondsRealtime(.5f);
             if (!gm.Victory || gm.CurrentState != GameState.GameOver) { Fail("Boss death failed to trigger victory"); yield break; }
-            foreach (var capture in new[]{"title","hub","sdk","player-values","pause","levelup","run","gameover"})
+            foreach (var capture in new[]{"title","hub","sdk","player-values","statistics","pause","levelup","run","gameover"})
                 if (!File.Exists(CapturePath(capture))) { Fail("Screenshot missing: "+capture); yield break; }
             Debug.Log("[SEAGULL SMOKE] PASS: offline boot/hub/SDK panel, menu keyboard focus and unobstructed button raycasts, meta-upgrade affordability, start, pause, shell XP, level-up, weapon unlock, completion, duplicate-end guard replay reset and boss death/victory.");
             Application.Quit(0);
