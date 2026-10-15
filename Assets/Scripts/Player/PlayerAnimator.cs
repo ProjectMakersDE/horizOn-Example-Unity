@@ -24,7 +24,7 @@ namespace SeagullStorm
 
         private void Update()
         {
-            if (_controller == null || _animator == null) return;
+            if (_controller == null || _animator == null || !_animator.enabled || _animator.runtimeAnimatorController == null) return;
             _animator.SetBool(IsWalking, _controller.MoveDirection.sqrMagnitude > 0.01f);
         }
 

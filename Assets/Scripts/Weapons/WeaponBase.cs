@@ -23,6 +23,7 @@ namespace SeagullStorm
             {
                 _timer = cooldown;
                 Fire();
+                PlayerController.Instance?.GetComponent<SeagullCutoutRig>()?.PlayAttack();
             }
         }
 

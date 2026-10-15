@@ -22,6 +22,7 @@ namespace SeagullStorm
                 {
                     if (xpPrefab == null) return null;
                     var p = Instantiate(xpPrefab, transform);
+                    SeagullArt.Attach(p.gameObject);
                     p.gameObject.SetActive(false);
                     return p;
                 },
@@ -51,7 +52,7 @@ namespace SeagullStorm
         public void ReturnAll()
         {
             foreach (Transform child in transform)
-                child.gameObject.SetActive(false);
+                if (child.gameObject.activeSelf) ReturnPickup(child.GetComponent<XPPickup>());
         }
     }
 }

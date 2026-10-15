@@ -1,58 +1,27 @@
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using PM.horizOn.Cloud.Core;
-
 namespace SeagullStorm
 {
-    /// <summary>
-    /// BootScene entry point. Initializes the horizOn SDK, attempts session restore,
-    /// and routes to TitleScene or GameScene.
-    /// </summary>
     public class GameBootstrap : MonoBehaviour
     {
-        private async void Start()
+        private void Start()
         {
             Application.targetFrameRate = 60;
-
-            // Initialize horizOn SDK
-            bool initialized = HorizonApp.Initialize();
-            if (!initialized)
-            {
-                Debug.LogError("[SeagullStorm] Failed to initialize horizOn SDK");
-                SceneManager.LoadScene("TitleScene");
-                return;
-            }
-
-            var server = new HorizonServer();
-            bool connected = await server.Connect();
-            if (!connected)
-            {
-                Debug.LogWarning("[SeagullStorm] Failed to connect to horizOn server");
-                SceneManager.LoadScene("TitleScene");
-                return;
-            }
-
-            // Ensure the HorizonManager facade exists before any facade call
-            // (BootScene has no HorizonManager GameObject; its Awake registers
-            // the instance and marks it DontDestroyOnLoad).
             if (HorizonManager.Instance == null)
-            {
                 new GameObject("[HorizonManager]").AddComponent<HorizonManager>();
-            }
-
-            // Start crash capture via facade
-            HorizonManager.Instance.StartCrashCapture();
-
-            // Attempt session restore
-            bool restored = await HorizonManager.Instance.RestoreSession();
-            if (restored)
+            SceneManager.LoadScene("TitleScene");
+            if (!SeagullSmoke.Enabled) PrepareOnline();
+        }
+        private async void PrepareOnline()
+        {
+            try
             {
-                SceneManager.LoadScene("GameScene");
+                if (Resources.Load<ScriptableObject>("horizOn/HorizonConfig") != null && HorizonApp.Initialize())
+                    HorizonManager.Instance.Configured = await new HorizonServer().Connect();
             }
-            else
-            {
-                SceneManager.LoadScene("TitleScene");
-            }
+            catch (Exception ex) { Debug.LogWarning("[SeagullStorm] Online services unavailable: " + ex.Message); }
         }
     }
 }

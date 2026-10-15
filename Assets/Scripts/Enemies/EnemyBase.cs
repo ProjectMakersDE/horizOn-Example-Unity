@@ -42,12 +42,13 @@ namespace SeagullStorm
             xpReward = xp;
             _target = target;
             _damageCooldown = 0f;
+            if (_sprite != null) _sprite.color = Color.white;
             gameObject.SetActive(true);
         }
 
         protected virtual void Update()
         {
-            if (!IsAlive || _target == null) return;
+            if (!IsAlive || _target == null || GameManager.Instance?.CurrentState != GameState.Run) return;
 
             _damageCooldown -= Time.deltaTime;
 
@@ -60,7 +61,13 @@ namespace SeagullStorm
 
         public virtual void TakeHit(int dmg)
         {
+            if (!IsAlive) return;
             _currentHP -= dmg;
+            GetComponent<SeagullCutoutRig>()?.PlayHurt();
+            CombatFeedback.Hit(transform.position, dmg);
+            if (_sprite != null) _sprite.color = GameColors.Orange;
+            CancelInvoke(nameof(ClearHitColor));
+            Invoke(nameof(ClearHitColor), 0.1f);
             AudioManager.Instance?.PlayEnemyHit();
 
             if (_currentHP <= 0)
@@ -68,6 +75,8 @@ namespace SeagullStorm
                 Die();
             }
         }
+
+        private void ClearHitColor() { if (_sprite != null) _sprite.color = Color.white; }
 
         protected virtual void Die()
         {
@@ -87,6 +96,7 @@ namespace SeagullStorm
             if (other.CompareTag("Player"))
             {
                 _damageCooldown = DamageInterval;
+                GetComponent<SeagullCutoutRig>()?.PlayAttack();
                 PlayerController.Instance?.TakeDamage(damage);
                 AudioManager.Instance?.PlayEnemyAttack();
             }
