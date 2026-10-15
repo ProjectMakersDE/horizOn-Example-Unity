@@ -151,6 +151,10 @@ namespace SeagullStorm
             return LocalizationManager.Instance.GetAllLocalizations(lang);
         });
         public Task<PlayerState> GetValidatedState() => SessionCall(() => ValidatedActionsManager.Instance.GetState());
+        public Task<PlayerValuesResult> GetPlayerValues() => SessionCall(() => PlayerValuesManager.Instance.GetState(GetUserId()));
+        public Task<PlayerValuesOffersResult> GetValueOffers() => SessionCall(() => PlayerValuesManager.Instance.GetOffers(GetUserId()));
+        public Task<PlayerValuesResult> PurchaseValueOffer(string key, string operationId) => SessionCall(() => PlayerValuesManager.Instance.Purchase(GetUserId(), key, operationId));
+        public Task<PlayerValuesResult> AdjustValue(string key, long amount, string reason, string operationId) => SessionCall(() => PlayerValuesManager.Instance.Adjust(GetUserId(), key, amount, reason, operationId));
         public bool ValidatedActionsSupported => ValidatedRunService.IsSupported;
         public string LastValidatedErrorCode => ValidatedRunService.LastErrorCode;
         public Task<int?> StartValidatedRun(string board) => SessionCall(() => ValidatedRunService.StartRun(board));

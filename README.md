@@ -6,7 +6,7 @@ The shared square-headed seagull and island artwork use the horizOn charcoal, cr
 
 ## Open and play
 
-1. Clone the repository and open it in **Unity 6000.5.0f1**.
+1. Clone the repository and open it in **Unity 6000.6.3f1**.
 2. Open `Assets/Scenes/BootScene.unity` and press Play.
 3. Choose **PLAY OFFLINE** for a fully playable practice game, or sign in for online features.
 
@@ -20,11 +20,11 @@ The complete official Unity package is installed through Unity Package Manager:
 
 ```text
 com.projectmakers.horizon
-https://github.com/ProjectMakersDE/horizOn-SDK-Unity.git#v1.9.0
-resolved commit ef9e80626133bb2b40928f2a5a7f6e25f47a63b8
+https://github.com/ProjectMakersDE/horizOn-SDK-Unity.git#c8af809820199fb0cf561d2ee4834a498c7b0810
+resolved commit c8af809820199fb0cf561d2ee4834a498c7b0810
 ```
 
-Verified against the published tag on 2026-10-02. This release contains Validated Actions, Player Profile, leaderboard board metadata and the session-bound Cloud Save fix from `1a23308`. No example-only SDK fork or unpublished package is required. `Packages/packages-lock.json` records the resolved official package hash.
+Pinned to the verified Develop commit for TASK-1004, including Player Values, Statistics and Realtime. This is a development integration, not a released SDK version. `Packages/packages-lock.json` records the exact official package hash. The example targets the installed Unity 6000.6.3f1 and its resolved package/import versions.
 
 ## Connect your own project
 
@@ -49,12 +49,21 @@ Choose **SDK DEMOS** in the hub. Operations show loaded data, empty states or fa
 | Crash | Signed-in capture, breadcrumbs, state keys and caught exceptions |
 | Validated Actions | Board-bound run ticket, seed, input evidence, validated submit, accepted/rejected results, evidence upload state, server-owned state read |
 | Player Profile | Read profile/catalog, cycle available avatars, explicitly apply avatar while retaining frame and badges |
+| Player Values | Explicit state/offers read, selected value/offer, purchase or permitted +1 adjustment, durable replay of the same pending action |
 | Localization | EN/DE backend catalog; `ui.play` changes the hub Start Run label when supplied |
 | Email Sending | Explicit recipient user ID and template slug; **SEND EMAIL** queues a real configured template |
 
 Email Sending never runs automatically. Local QA does not sign in, redeem gifts, send feedback/email or write any production API data.
 
 The pinned leaderboard API supports board selection, Top, Around and Rank; it has no page-number/date-filter query API. These examples use the capabilities actually shipped by the package.
+
+## Player values demo
+
+Open **SDK DEMOS > Player values** after signing in. **Read balances** loads state and offers explicitly. **Next value** and **Next offer** select server-configured entries; **Buy offer** uses the server's costs/rewards. **Adjust +1** requests one unit of the selected value only when the studio has enabled and bounded its adjustment rule. Configure definitions and offers in the Dashboard first. No timer, automatic purchase or automatic grant runs.
+
+The displayed backend balances are separate from the game's practice/upgrade coins. The example never adds returned rewards to local progress. It displays the current server state, including balances returned with a business failure. The studio can enable validated-run value rewards using the existing configuration described below; this is not a migration of previous local coins.
+
+One immutable action is saved in PlayerPrefs before HTTP, scoped by a SHA256 of host, actual project API key and player ID; credentials are never stored in the pending record. A restart or lost response uses **Retry pending** with the same operation ID and payload. An unresolved or unreadable intent blocks another action. `OPERATION_EXPIRED` requires explicit studio/player reconciliation; the example does not replace its ID. Sign-out, project changes and closed/reopened panels reject late UI callbacks. Leaving the panel may keep a confirmed-but-unobserved intent, which safely replays the same server receipt next time.
 
 ## Cloud progress boundaries
 

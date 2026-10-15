@@ -28,6 +28,8 @@ namespace SeagullStorm
             yield return new WaitForSecondsRealtime(2);
             var gm=GameManager.Instance;
             if (gm==null || !gm.ProgressLoaded || HorizonManager.Instance.Online) { Fail("Offline hub failed");yield break; }
+            try { PlayerValueIntentSmoke.Check(); }
+            catch (Exception error) { Fail("Player value intent protection failed: " + error.Message); yield break; }
             if (!CheckFocus("START RUN", true)) yield break;
             ScreenCapture.CaptureScreenshot(CapturePath("hub"));
             yield return new WaitForSecondsRealtime(.5f);
@@ -38,6 +40,16 @@ namespace SeagullStorm
             if (!CheckFocus("Top 10", true)) yield break;
             ScreenCapture.CaptureScreenshot(CapturePath("sdk"));
             yield return new WaitForSecondsRealtime(.5f);
+            GameObject.Find("Player values")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+            yield return new WaitForSecondsRealtime(.3f);
+            if (!CheckFocus("Read balances", true)) yield break;
+            GameObject.Find("Read balances")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+            if (HorizonManager.Instance.Online) { Fail("Player values demo left offline practice"); yield break; }
+            ScreenCapture.CaptureScreenshot(CapturePath("player-values"));
+            yield return new WaitForSecondsRealtime(.5f);
+            GameObject.Find("BACK")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+            yield return null; // Re-enabled uGUI controls register for raycasting on the next rendered frame.
+            if (!CheckFocus("Player values", true)) yield break;
             gm.ProgressLoaded = false;
             yield return null;
             GameObject.Find("Seagull interface/horizOn UI/SDK demos/CLOSE")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
@@ -104,7 +116,7 @@ namespace SeagullStorm
             boss.TakeHit(9999);
             yield return new WaitForSecondsRealtime(.5f);
             if (!gm.Victory || gm.CurrentState != GameState.GameOver) { Fail("Boss death failed to trigger victory"); yield break; }
-            foreach (var capture in new[]{"title","hub","sdk","pause","levelup","run","gameover"})
+            foreach (var capture in new[]{"title","hub","sdk","player-values","pause","levelup","run","gameover"})
                 if (!File.Exists(CapturePath(capture))) { Fail("Screenshot missing: "+capture); yield break; }
             Debug.Log("[SEAGULL SMOKE] PASS: offline boot/hub/SDK panel, menu keyboard focus and unobstructed button raycasts, meta-upgrade affordability, start, pause, shell XP, level-up, weapon unlock, completion, duplicate-end guard replay reset and boss death/victory.");
             Application.Quit(0);
@@ -135,7 +147,7 @@ namespace SeagullStorm
                 var hits = new System.Collections.Generic.List<UnityEngine.EventSystems.RaycastResult>();
                 events.RaycastAll(new UnityEngine.EventSystems.PointerEventData(events) { position = point }, hits);
                 if (hits.Count == 0 || hits[0].gameObject != selected)
-                { Fail("Button raycast blocked: " + expected); return false; }
+                { Fail("Button raycast blocked: " + expected + "; hit=" + (hits.Count > 0 ? hits[0].gameObject.name : "<none>")); return false; }
             }
             return true;
         }

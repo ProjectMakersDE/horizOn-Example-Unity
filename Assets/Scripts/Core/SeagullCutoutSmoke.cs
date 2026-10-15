@@ -29,14 +29,14 @@ namespace SeagullStorm
             bool changed = false;
             for (int i = 0; i < 16; i++)
             {
-                player.GetComponent<Rigidbody2D>().position += Vector2.right * 1.5f;
-                yield return null;
+                MovePlayerFixture(player);
+                yield return new WaitForEndOfFrame();
                 changed |= Quaternion.Angle(rotation, foot.localRotation) > 1f;
             }
             if (!changed || gull.CurrentMotion != SeagullCutoutRig.Motion.Walk) { Fail("Moving gull kept static joints"); yield break; }
             var source = player.GetComponent<SpriteRenderer>();
             source.flipX = true;
-            yield return null;
+            yield return new WaitForEndOfFrame();
             if (player.transform.Find("Cutout rig/Facing and hop").localScale.x >= 0) { Fail("Gull facing did not mirror the rig"); yield break; }
             source.flipX = false;
             player.GetComponent<Rigidbody2D>().position = start;
@@ -50,8 +50,8 @@ namespace SeagullStorm
             changed = false;
             for (int i = 0; i < 12; i++)
             {
-                player.GetComponent<Rigidbody2D>().position += Vector2.right * 1.5f;
-                yield return null;
+                MovePlayerFixture(player);
+                yield return new WaitForEndOfFrame();
                 changed |= Quaternion.Angle(rotation, foot.localRotation) > 1f;
             }
             if (!changed || gull.CurrentMotion != SeagullCutoutRig.Motion.Attack)
@@ -74,7 +74,7 @@ namespace SeagullStorm
 
             crab.TakeHit(1);
             player.TakeDamage(1);
-            yield return null;
+            yield return new WaitForEndOfFrame();
             if (crabRig.CurrentMotion != SeagullCutoutRig.Motion.Hurt || gull.CurrentMotion != SeagullCutoutRig.Motion.Hurt)
             { Fail("Actual damage did not enter hurt poses"); yield break; }
             if (Joint(crab.gameObject, "body").GetComponentInChildren<SpriteRenderer>().color != GameColors.Orange)
@@ -104,6 +104,15 @@ namespace SeagullStorm
             Debug.Log("[CUTOUT SMOKE] PASS: seven gull and nine crab parts, original renderer disabled, movement joints and movement during real auto-fire, correct facing, actual feather/contact attacks and damage, full-part tint, pause freeze and clean pool reuse.");
         }
 
+        private static void MovePlayerFixture(PlayerController player)
+        {
+            // Drive both physics and rendered position, then observe after the rig's LateUpdate.
+            // A physics-only teleport can remain invisible during several fast rendered frames.
+            var body = player.GetComponent<Rigidbody2D>();
+            Vector2 next = body.position + Vector2.right * 1.5f;
+            body.position = next;
+            player.transform.position = new Vector3(next.x, next.y, player.transform.position.z);
+        }
         private static Transform Joint(GameObject actor, string name) => actor.transform.Find("Cutout rig/Facing and hop/Body lean/" + name);
         private static bool CheckRig(GameObject actor, SeagullCutoutRig rig, int count)
         {

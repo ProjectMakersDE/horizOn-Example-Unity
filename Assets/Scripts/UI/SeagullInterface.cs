@@ -15,6 +15,7 @@ namespace SeagullStorm
     {
         private Canvas _canvas;
         private GameObject _home, _demo;
+        private SeagullPlayerValuesDemo _valuesDemo;
         private TMP_Text _stats, _connection, _output, _runStatus;
         private TMP_InputField _name, _email, _password, _code, _feedback, _recipient, _template;
         private Button _play, _demoButton;
@@ -120,8 +121,8 @@ namespace SeagullStorm
             _demo=Panel(_canvas.transform,"SDK demos",new Vector2(1210,630),Vector2.zero,new Color32(0x1C,0x1C,0x1C,255));
             Text(_demo.transform,"horizOn  /  SDK DEMOS",new Vector2(780,40),new Vector2(-166,265),26,GameColors.Orange,FontStyles.Bold);
             Button(_demo.transform,"CLOSE",new Vector2(125,40),new Vector2(505,265),ShowHome);
-            string[] buttons={"Top 10","Around me","My rank","Next board","News","Cloud save","Profile","Avatar","Apply avatar","EN / DE","Server state","Email demo"};
-            Action[] actions={ ()=>{_page="top";Run(ShowLeaderboard);},()=>{_page="around";Run(ShowLeaderboard);},()=>Run(ShowRank),()=>Run(NextBoard),()=>Run(ShowNews),()=>Run(SyncSave),()=>Run(ShowProfile),()=>Run(NextAvatar),()=>Run(ApplyAvatar),()=>Run(LoadLocalization),()=>Run(ShowState),()=>ShowEmail() };
+            string[] buttons={"Top 10","Around me","My rank","Next board","News","Cloud save","Profile","Avatar","Apply avatar","EN / DE","Server state","Email demo","Player values"};
+            Action[] actions={ ()=>{_page="top";Run(ShowLeaderboard);},()=>{_page="around";Run(ShowLeaderboard);},()=>Run(ShowRank),()=>Run(NextBoard),()=>Run(ShowNews),()=>Run(SyncSave),()=>Run(ShowProfile),()=>Run(NextAvatar),()=>Run(ApplyAvatar),()=>Run(LoadLocalization),()=>Run(ShowState),()=>ShowEmail(),ShowPlayerValues };
             for(int i=0;i<buttons.Length;i++) Button(_demo.transform,buttons[i],new Vector2(148,42),new Vector2(-502+(i%7)*166,204-(i/7)*54),actions[i]);
             _output=Text(_demo.transform,"Sign in to use online demos. Offline progress stays on this device.",new Vector2(1090,230),new Vector2(0,-11),18,GameColors.LightText);
             _output.alignment=TextAlignmentOptions.TopLeft; _output.richText=false;
@@ -131,6 +132,16 @@ namespace SeagullStorm
             Button(_demo.transform,"Send feedback",new Vector2(150,44),new Vector2(-1,-243),()=>Run(SendFeedback));
             Text(_demo.transform,"Validated Actions: enable validated_runs_enabled in Remote Config.\nNo ticket means practice only. Input logs are review evidence.\nNo authoritative replay is claimed. Avatar IDs come from your catalog.",new Vector2(420,100),new Vector2(331,-220),16,GameColors.Sand);
             _demo.SetActive(false);
+        }
+        private void ShowPlayerValues()
+        {
+            _valuesDemo ??= new SeagullPlayerValuesDemo(_canvas.transform, () =>
+            {
+                _demo.SetActive(true);
+                FocusControl(_demo.transform.Find("Player values")?.GetComponent<Button>());
+            });
+            _demo.SetActive(false);
+            _valuesDemo.Show();
         }
         private void ShowEmail()
         {
@@ -200,15 +211,16 @@ namespace SeagullStorm
             if(!_title&&GameManager.Instance!=null)
             {
                 var state = GameManager.Instance.CurrentState;
-                bool hub=state==GameState.Hub;_home.SetActive(hub);if(!hub)_demo.SetActive(false);
+                bool hub=state==GameState.Hub;_home.SetActive(hub);if(!hub){_demo.SetActive(false);_valuesDemo?.Hide();}
                 bool enteredState = _focusedState != state;
                 _focusedState = state;
                 bool wasReady = _play.interactable;
                 _play.interactable = GameManager.Instance.ProgressLoaded && !GameManager.Instance.RunSubmissionPending && !GameManager.Instance.IsStartingRun;
-                _home.GetComponent<CanvasGroup>().interactable = !_demo.activeSelf;
+                bool modal = _demo.activeSelf || (_valuesDemo?.IsVisible == true);
+                _home.GetComponent<CanvasGroup>().interactable = !modal;
                 // Loading may clear selection when Start becomes disabled. Focus only when
                 // entering the ready hub, leaving all later user navigation untouched.
-                if (hub && !_demo.activeSelf && _play.interactable && (enteredState || !wasReady)) FocusControl(_play);
+                if (hub && !modal && _play.interactable && (enteredState || !wasReady)) FocusControl(_play);
                 else if (enteredState && state == GameState.Run) FocusControl(null);
                 _runStatus.gameObject.SetActive(!hub);
                 var gm=GameManager.Instance;
@@ -312,7 +324,7 @@ namespace SeagullStorm
         {
             var go=new GameObject("Text",typeof(RectTransform),typeof(TextMeshProUGUI));go.transform.SetParent(parent,false);var r=go.GetComponent<RectTransform>();r.anchorMin=r.anchorMax=new Vector2(.5f,.5f);r.sizeDelta=size;r.anchoredPosition=pos;var t=go.GetComponent<TMP_Text>();t.font=Font;t.text=value;t.fontSize=fontSize;t.fontStyle=style;t.color=color;t.alignment=TextAlignmentOptions.Left;t.raycastTarget=false;return t;
         }
-        private static Button Button(Transform p,string title,Vector2 size,Vector2 pos,Action action)
+        internal static Button Button(Transform p,string title,Vector2 size,Vector2 pos,Action action)
         {
             var go=Panel(p,title,size,pos,GameColors.Orange);var b=go.AddComponent<Button>();go.AddComponent<SeagullSelectionOutline>();b.targetGraphic=go.GetComponent<Image>();var text=Text(go.transform,title,size-Vector2.one*8,Vector2.zero,18,GameColors.DarkBG,FontStyles.Bold);text.alignment=TextAlignmentOptions.Center;b.onClick.AddListener(()=>action());var colors=b.colors;colors.highlightedColor=GameColors.Sand;colors.pressedColor=GameColors.Teal;colors.disabledColor=new Color(.35f,.35f,.35f);b.colors=colors;return b;
         }

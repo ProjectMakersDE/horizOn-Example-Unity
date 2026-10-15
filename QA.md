@@ -52,3 +52,15 @@ The first native launch command failed before the process started because the pu
 A dedicated QA project is required to test real guest/email/Apple sessions, board list/top/around/rank, a positive and rejected validated run, evidence upload failure/success, cloud absence/read/write and expired sessions, catalog/avatar updates, localization strings, gift redemption, feedback/log/crash collection and template email status. No production data was written and no email was sent during this task.
 
 The SDK panel uses real APIs, so an empty backend catalog, missing rules, missing templates and absent news are shown as setup/empty states. A successful offline smoke does not prove these backend roundtrips or the broader TASK-615 gate.
+
+## Player Values example validation (2026-10-16)
+
+TASK-1004 preserves all three earlier local Seagull Storm improvements by merging them with the current upstream example. The project now targets the installed Unity 6000.6.3f1 and pins the complete SDK to Develop commit `c8af809820199fb0cf561d2ee4834a498c7b0810`; this is a tested source pin, not a new SDK release. Unity generated the importer, package and rendering-settings migration. The explicit Screen Capture module supports the existing native smoke.
+
+Native import and scene validation passed, followed by a successful macOS Mono Development build. The rendered 1280 × 720 player completed both `[CUTOUT SMOKE] PASS` and `[SEAGULL SMOKE] PASS`, exit 0. The new checks verify persistent operation IDs and payloads across store recreation, project isolation, protection of an existing or corrupt pending intent, matching-result confirmation, the Player Values panel's focus and raycast, its offline state, and return to the hub. Existing gameplay, cutout animation, upgrades, level-up, death, completion and replay checks also passed. The physics-only cutout fixture now synchronizes its test transform and observes poses after the rig's LateUpdate, so its checks remain valid at the current renderer's frame rate. Production actor motion is unchanged.
+
+Eight captures cover title, hub, SDK demos, Player Values, pause, level-up, active run and game over. Visual inspection confirms readable controls and an opaque Player Values panel that covers the hub. The smoke runs without an SDK configuration and cannot prove online balances or purchases; real Develop roundtrips are a separate acceptance gate. Server balances remain separate from offline practice coins.
+
+The new panel reads balances and offers on demand, persists an immutable player/project-bound purchase or adjustment before sending it, and retries only its original operation ID. Business errors display the returned server state. Unknown or expired outcomes retain the intent; they do not create another purchase. A changed offer-definition version invalidates the displayed catalogue before a fresh purchase. Independent review approved this correction.
+
+Evidence is retained in the task's verified backup; regenerable Library and player-build files are excluded from that backup. This repository has no PR-validation CI workflow; its SDK-update automation is not a test gate. No live service was changed.
