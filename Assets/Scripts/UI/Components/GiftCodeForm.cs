@@ -5,86 +5,44 @@ using TMPro;
 
 namespace SeagullStorm
 {
-    /// <summary>
-    /// Gift code input + validate/redeem.
-    /// </summary>
+    /// <summary>First click prepares and saves; the next explicit click confirms the same V2 original.</summary>
     public class GiftCodeForm : MonoBehaviour
     {
         [SerializeField] private TMP_InputField codeInput;
         [SerializeField] private Button redeemButton;
         [SerializeField] private TMP_Text statusText;
-
-        private void OnEnable()
+        private void OnEnable() { if (redeemButton != null) redeemButton.onClick.AddListener(OnRedeem); }
+        private void OnDisable() { if (redeemButton != null) redeemButton.onClick.RemoveListener(OnRedeem); }
+        private void Update()
         {
-            if (redeemButton != null) redeemButton.onClick.AddListener(OnRedeem);
+            var h = HorizonManager.Instance;
+            if (redeemButton == null) return;
+            redeemButton.interactable = h != null && h.Online && !h.GiftInFlight;
+            var label = redeemButton.GetComponentInChildren<TMP_Text>();
+            if (label != null) label.text = h != null && h.ReadPendingGift(out var original) && original != null ? "Confirm / retry saved gift" : "Prepare gift";
         }
-
-        private void OnDisable()
-        {
-            if (redeemButton != null) redeemButton.onClick.RemoveListener(OnRedeem);
-        }
-
         private async void OnRedeem()
         {
-            if (HorizonManager.Instance?.Online != true) { SetStatus("Sign in to redeem online gifts."); return; }
-            string code = codeInput != null ? codeInput.text.Trim() : "";
-            if (string.IsNullOrWhiteSpace(code))
+            var h = HorizonManager.Instance;
+            if (h?.Online != true || h.GiftInFlight) { SetStatus("Sign in to use online gifts."); return; }
+            if (!h.ReadPendingGift(out var original)) { SetStatus("Original storage needs recovery. No replacement will be created."); return; }
+            try
             {
-                SetStatus("Enter a code.");
-                return;
-            }
-
-            var save = GameManager.Instance?.Save;
-            if (save != null && save.giftCodesRedeemed.Contains(code))
-            {
-                SetStatus("Already redeemed!");
-                return;
-            }
-
-            SetStatus("Validating...");
-
-            bool? valid = await HorizonManager.Instance.ValidateGiftCode(code);
-            if (valid != true)
-            {
-                SetStatus("Invalid code.");
-                return;
-            }
-
-            var result = await HorizonManager.Instance.RedeemGiftCode(code);
-            if (result != null)
-            {
-                save?.giftCodesRedeemed.Add(code);
-
-                if (!string.IsNullOrEmpty(result.giftData))
+                if (original == null)
                 {
-                    try
-                    {
-                        var reward = JsonUtility.FromJson<GiftReward>(result.giftData);
-                        if (reward != null && save != null)
-                            save.coins += Mathf.Max(0, reward.coins);
-                    }
-                    catch (System.Exception ex) { HorizonManager.Instance?.RecordException(ex); }
+                    var intent = await h.PrepareGiftCode(codeInput != null ? codeInput.text.Trim() : "");
+                    if (this == null) return;
+                    SetStatus(intent == null ? "Prepare: " + h.LastGiftError : "Saved " + intent.code + " / expected " + intent.expectedCount + ", revision " + intent.configRevision + ". Click Confirm explicitly.");
                 }
-
-                GameManager.Instance?.NotifyProgressChanged();
-                if (save != null) await HorizonManager.Instance.SaveCloudData(JsonUtility.ToJson(save));
-                SetStatus("Redeemed!");
+                else
+                {
+                    var result = await h.RedeemPendingGift();
+                    if (this == null) return;
+                    SetStatus(result == null ? "Original retained: " + h.LastGiftError : "Server confirmed count " + result.count + (result.alreadyApplied ? " (already applied)." : "."));
+                }
             }
-            else
-            {
-                SetStatus("Redemption failed.");
-            }
+            catch (Exception) { if (this != null) SetStatus("Request uncertain; keep the saved original."); }
         }
-
-        private void SetStatus(string msg)
-        {
-            if (statusText != null) statusText.text = msg;
-        }
-
-        [Serializable]
-        private class GiftReward
-        {
-            public int coins;
-        }
+        private void SetStatus(string message) { if (statusText != null) statusText.text = message; }
     }
 }

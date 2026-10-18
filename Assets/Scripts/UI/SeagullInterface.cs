@@ -120,18 +120,20 @@ namespace SeagullStorm
         private void BuildDemo()
         {
             _demo=Panel(_canvas.transform,"SDK demos",new Vector2(1210,630),Vector2.zero,new Color32(0x1C,0x1C,0x1C,255));
+            _demo.AddComponent<CanvasGroup>();
             Text(_demo.transform,"horizOn  /  SDK DEMOS",new Vector2(780,40),new Vector2(-166,265),26,GameColors.Orange,FontStyles.Bold);
             Button(_demo.transform,"CLOSE",new Vector2(125,40),new Vector2(505,265),ShowHome);
-            string[] buttons={"Top 10","Around me","My rank","Next board","News","Cloud save","Profile","Avatar","Apply avatar","EN / DE","Server state","Email demo","Player values","Statistics"};
-            Action[] actions={ ()=>{_page="top";Run(ShowLeaderboard);},()=>{_page="around";Run(ShowLeaderboard);},()=>Run(ShowRank),()=>Run(NextBoard),()=>Run(ShowNews),()=>Run(SyncSave),()=>Run(ShowProfile),()=>Run(NextAvatar),()=>Run(ApplyAvatar),()=>Run(LoadLocalization),()=>Run(ShowState),()=>ShowEmail(),ShowPlayerValues,ShowStatistics };
-            for(int i=0;i<buttons.Length;i++) Button(_demo.transform,buttons[i],new Vector2(148,42),new Vector2(-502+(i%7)*166,204-(i/7)*54),actions[i]);
+            string[] buttons={"Top 10","Around me","My rank","Next board","News","Cloud save","Profile","Avatar","Apply avatar","EN / DE","Server state","Email demo","Player values","Statistics","Feature lab"};
+            Action[] actions={ ()=>{_page="top";Run(ShowLeaderboard);},()=>{_page="around";Run(ShowLeaderboard);},()=>Run(ShowRank),()=>Run(NextBoard),()=>Run(ShowNews),()=>Run(SyncSave),()=>Run(ShowProfile),()=>Run(NextAvatar),()=>Run(ApplyAvatar),()=>Run(LoadLocalization),()=>Run(ShowState),()=>ShowEmail(),ShowPlayerValues,ShowStatistics,SeagullFeatureLab.Open };
+            for(int i=0;i<buttons.Length;i++) Button(_demo.transform,buttons[i],new Vector2(134,42),new Vector2(-513+(i%8)*146,204-(i/8)*54),actions[i]);
             _output=Text(_demo.transform,"Sign in to use online demos. Offline progress stays on this device.",new Vector2(1090,230),new Vector2(0,-11),18,GameColors.LightText);
             _output.alignment=TextAlignmentOptions.TopLeft; _output.richText=false;
             _code=Input(_demo.transform,"Gift code",new Vector2(430,44),new Vector2(-300,-186));
-            Button(_demo.transform,"Redeem",new Vector2(150,44),new Vector2(-1,-186),()=>Run(Redeem));
+            Button(_demo.transform,"Prepare gift",new Vector2(150,44),new Vector2(-1,-186),()=>Run(PrepareGift));
+            Button(_demo.transform,"Confirm / retry gift",new Vector2(195,44),new Vector2(182,-186),()=>Run(ConfirmGift));
             _feedback=Input(_demo.transform,"Feedback message",new Vector2(430,44),new Vector2(-300,-243));
             Button(_demo.transform,"Send feedback",new Vector2(150,44),new Vector2(-1,-243),()=>Run(SendFeedback));
-            Text(_demo.transform,"Validated Actions: enable validated_runs_enabled in Remote Config.\nNo ticket means practice only. Input logs are review evidence.\nNo authoritative replay is claimed. Avatar IDs come from your catalog.",new Vector2(420,100),new Vector2(331,-220),16,GameColors.Sand);
+            Text(_demo.transform,"Validated Actions: enable validated_runs_enabled in Remote Config.\nNo ticket means practice only. Input logs are review evidence.\nNo authoritative replay is claimed. Avatar IDs come from your catalog.",new Vector2(420,75),new Vector2(331,-259),14,GameColors.Sand);
             _demo.SetActive(false);
         }
         private void ShowPlayerValues()
@@ -212,8 +214,27 @@ namespace SeagullStorm
         private async Task ApplyAvatar(){if(!Online())return;if(_profile==null)await ShowProfile();if(_profile==null)return;var available=_profile.GetCosmetics("avatar").FindAll(c=>c.available);if(available.Count==0){_output.text="No available avatars in your catalog.";return;}var updated=await HorizonManager.Instance.SetProfile(available[_avatarIndex%available.Count].id,_profile.profile.frameId,_profile.profile.badges);_output.text=updated!=null?"Avatar saved; existing frame and badges retained.":"Profile update failed: "+HorizonManager.Instance.ProfileError;_profile=updated??_profile;}
         private async Task LoadLocalization(){if(!Online())return;_language=_language=="en"?"de":"en";var result=await HorizonManager.Instance.Localize(_language);if(result==null){_output.text="Localization unavailable.";return;}foreach(var label in _playLabels)if(result.TryGetValue("ui.play",out var translated)&&!string.IsNullOrWhiteSpace(translated))label.text=translated;_output.text=$"LOCALIZATION / {_language}\nLoaded {result.Count} strings. ui.play updates the Start Run button when provided.\n";int count=0;foreach(var pair in result){_output.text+=pair.Key+" = "+pair.Value+"\n";if(++count>=5)break;}}
         private async Task ShowState(){if(!Online())return;var state=await HorizonManager.Instance.GetValidatedState();_output.text=state!=null?"SERVER-OWNED STATE\n"+JsonUtility.ToJson(state):"State unavailable. Configure Validated Actions rules in your dashboard.";}
-        private async Task Redeem(){if(!Online()||!GameManager.Instance.ProgressLoaded||GameManager.Instance.RunSubmissionPending)return;var gm=GameManager.Instance;int generation=HorizonManager.Instance.Generation;if(string.IsNullOrWhiteSpace(_code.text)){_output.text="Enter a gift code.";return;}var code=_code.text.Trim();bool? valid=await HorizonManager.Instance.ValidateGiftCode(code);if(valid!=true){_output.text=valid==null?"Gift validation unavailable.":"Gift code is invalid or expired.";return;}var reward=await HorizonManager.Instance.RedeemGiftCode(code);if(reward==null){if(_output!=null)_output.text="Gift redemption failed.";return;}if(this==null||GameManager.Instance!=gm||HorizonManager.Instance.Generation!=generation)return;if(!string.IsNullOrEmpty(reward.giftData)){var value=JsonUtility.FromJson<GiftReward>(reward.giftData);GameManager.Instance.Save.coins+=Mathf.Max(0,value?.coins??0);}GameManager.Instance.NotifyProgressChanged();await HorizonManager.Instance.SaveCloudData(JsonUtility.ToJson(GameManager.Instance.Save));_output.text="Gift redeemed. Rewards saved.";}
-        [Serializable]private class GiftReward{public int coins;}
+        private async Task PrepareGift()
+        {
+            if (!Online()) return;
+            var h = HorizonManager.Instance;
+            if (h.ReadPendingGift(out var saved) && saved != null) { ShowGiftOriginal(saved); return; }
+            var intent = await h.PrepareGiftCode(_code.text.Trim());
+            if (this == null) return;
+            if (intent == null) _output.text = "Gift prepare refused: " + h.LastGiftError + ". Existing original retained.";
+            else ShowGiftOriginal(intent);
+        }
+        private void ShowGiftOriginal(PM.horizOn.Cloud.Objects.Network.Responses.GiftCodeIntent intent)
+            => _output.text = "PREPARED V2 GIFT / no redemption sent\nCode: " + intent.code + "\nCampaign: " + intent.campaignId + "\nExpected count: " + intent.expectedCount + " / config revision: " + intent.configRevision + "\nChoose Confirm / retry gift explicitly. Restart keeps this exact original.";
+        private async Task ConfirmGift()
+        {
+            if (!Online()) return;
+            var h = HorizonManager.Instance;
+            var result = await h.RedeemPendingGift();
+            if (this == null) return;
+            _output.text = result == null ? "Gift refused / uncertain: " + h.LastGiftError + ". Saved original retained; reconcile permanent errors before another gift."
+                : "Gift confirmed by server / count " + result.count + (result.alreadyApplied ? " (already applied)" : "") + ". Read Player values / Inventory for current holdings. Local practice coins were not changed.";
+        }
         private async Task SendFeedback(){if(!Online())return;if(string.IsNullOrWhiteSpace(_feedback.text)){_output.text="Enter feedback before sending.";return;}_output.text=await HorizonManager.Instance.SubmitFeedback("Seagull Storm feedback",_feedback.text.Trim(),"GENERAL")?"Feedback sent. Thank you!":"Feedback failed to send.";}
         private void Update()
         {
@@ -227,7 +248,8 @@ namespace SeagullStorm
                 _focusedState = state;
                 bool wasReady = _play.interactable;
                 _play.interactable = GameManager.Instance.ProgressLoaded && !GameManager.Instance.RunSubmissionPending && !GameManager.Instance.IsStartingRun;
-                bool modal = _demo.activeSelf || (_valuesDemo?.IsVisible == true) || (_statisticsDemo?.IsVisible == true);
+                _demo.GetComponent<CanvasGroup>().interactable = SeagullFeatureLab.Instance?.Visible != true;
+                bool modal = (SeagullFeatureLab.Instance?.Visible == true) || _demo.activeSelf || (_valuesDemo?.IsVisible == true) || (_statisticsDemo?.IsVisible == true);
                 _home.GetComponent<CanvasGroup>().interactable = !modal;
                 // Loading may clear selection when Start becomes disabled. Focus only when
                 // entering the ready hub, leaving all later user navigation untouched.
