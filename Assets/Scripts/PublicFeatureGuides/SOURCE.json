@@ -1,0 +1,23 @@
+{
+  "sdk": "991146900530bb1338452d4e6c233bcd5fe3bfd1",
+  "dashboardBase": "bfa5b2dfc0b4b882d73e34f33cffd74a61193ce9",
+  "sourceManifestSha256": "6f7fadd53010a1d56433db0b5048b6bdadd29464435ffa1e7e7823f594389ba0",
+  "files": {
+    "GroupsDemo.cs": {
+      "feature": "groups",
+      "sha256": "9df7c2853dfcb71e9177279f96a1b0d8f6e0b827cc3221b7b3184b312ab65cb1"
+    },
+    "ItemsDemo.cs": {
+      "feature": "items",
+      "sha256": "2eef2c2062d5a742017b825d290b89c4013b3458b2040cd18e6a73c7b4796cbd"
+    },
+    "MatchesDemo.cs": {
+      "feature": "matches",
+      "sha256": "938be6157edd1ffee782e0adf1efeb8f20fd4df88e6e2df6f3a986521ff6a4c2"
+    },
+    "SharedObjectsDemo.cs": {
+      "feature": "shared-objects",
+      "sha256": "9c1b69515342754bcbc2355f13d462dc6bf6478b4e95a8b42d1a08010e55a45a"
+    }
+  }
+}

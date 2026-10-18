@@ -19,5 +19,7 @@ for file in ['Assets/Scripts/Horizon/HorizonManager.cs','Assets/Scripts/UI/Compo
  source=(ROOT/file).read_text();assert 'GiftReward' not in source and '.giftData' not in source,file
  assert '.Redeem(code)' not in source and 'ValidateGiftCode(' not in source,file
 assert (ROOT/'Assets/Scenes/HelloFeatures.unity').is_file()
+guides=ROOT/'Assets/Scripts/PublicFeatureGuides';guide_proof=json.loads((guides/'SOURCE.json').read_text());assert guide_proof['sdk']==commit
+for name,proof in guide_proof['files'].items():assert hashlib.sha256((guides/name).read_bytes()).hexdigest()==proof['sha256'],name
 assert 'SeagullFeaturesSetup.Preflight' in (ROOT/'README.md').read_text(),'Document the actual native gate'
 print(f'Exact SDK {commit}: {len(files)} unmodified existing-session recipes/helpers; unchanged public guide and V2 game/Hello boundaries verified')
