@@ -1,7 +1,7 @@
 {
   "sdk": "991146900530bb1338452d4e6c233bcd5fe3bfd1",
   "dashboardBase": "bfa5b2dfc0b4b882d73e34f33cffd74a61193ce9",
-  "sourceManifestSha256": "6f7fadd53010a1d56433db0b5048b6bdadd29464435ffa1e7e7823f594389ba0",
+  "sourceManifestSha256": "72d4bfe1cbd7b34d76d0ec6f98df9916560262dba5fa68e2dfce3256d5789939",
   "files": {
     "GroupsDemo.cs": {
       "feature": "groups",
@@ -9,7 +9,7 @@
     },
     "ItemsDemo.cs": {
       "feature": "items",
-      "sha256": "2eef2c2062d5a742017b825d290b89c4013b3458b2040cd18e6a73c7b4796cbd"
+      "sha256": "59c74921edced4764dcb7d045357bcb68a047481c9dac0e6af2f888ce7ecb96a"
     },
     "MatchesDemo.cs": {
       "feature": "matches",
@@ -19,5 +19,6 @@
       "feature": "shared-objects",
       "sha256": "9c1b69515342754bcbc2355f13d462dc6bf6478b4e95a8b42d1a08010e55a45a"
     }
-  }
+  },
+  "commentOnlyNativeEquivalence": "Prior native3534/3535: identical executable lines; only Items replay explanation changed"
 }

@@ -27,6 +27,7 @@ public sealed class ItemsDemo : MonoBehaviour
     }
 }
 // SDK ItemsExample/ItemsSampleStore persist original instanceId/body/revision before writes.
-// A purchase uses the durable Player Values operationId; refresh inventory after success.
-// Original operation.items remain references if an item was later discarded/transferred.
+// Keep the original Player Values operationId for purchase recovery.
+// The initial success may include item references; retained replay may return empty applied/items.
+// Read the current inventory separately. Never reconstruct earlier item references.
 // A failed refresh never authorizes a replacement purchase or a local item grant.
