@@ -18,7 +18,49 @@
     "SharedObjectsDemo.cs": {
       "feature": "shared-objects",
       "sha256": "9c1b69515342754bcbc2355f13d462dc6bf6478b4e95a8b42d1a08010e55a45a"
+    },
+    "PlayerValuesDemo.cs": {
+      "feature": "player-values",
+      "sha256": "fa7fef91d8b4ceb48e5b68e15494c812fe3f945c09349d784e58972581d90bfa",
+      "dashboardSource": "742180e7710e5648db17ed1b64b14a59686165c1"
+    },
+    "StatisticsDemo.cs": {
+      "feature": "statistics",
+      "sha256": "34c40a5852fe2e6fcd6a59fd090d6875bcc6fe52a9a63604f858ef4b15790a2e",
+      "dashboardSource": "742180e7710e5648db17ed1b64b14a59686165c1"
+    },
+    "AchievementsDemo.cs": {
+      "feature": "achievements",
+      "sha256": "5708bd57c001eb9ac9fb026aa375fd8b110bd11a22da437eaa842f49f998c21f",
+      "dashboardSource": "742180e7710e5648db17ed1b64b14a59686165c1"
+    },
+    "InboxDemo.cs": {
+      "feature": "inbox",
+      "sha256": "783ed36085b89eb60799a1718d9eb943fd7f430f22b56778618f7c53e21124b5",
+      "dashboardSource": "742180e7710e5648db17ed1b64b14a59686165c1"
+    },
+    "FriendsDemo.cs": {
+      "feature": "friends",
+      "sha256": "0f0a6317158433430c3fb5f49cc2e145004bc868e4b1a62c51db4b54c735cc97",
+      "dashboardSource": "742180e7710e5648db17ed1b64b14a59686165c1"
+    },
+    "ChatDemo.cs": {
+      "feature": "chat",
+      "sha256": "33e983b5868e434ee0abf50d442352c52847173ac5baf8add4d1db1c457ced6a",
+      "dashboardSource": "742180e7710e5648db17ed1b64b14a59686165c1"
     }
   },
-  "commentOnlyNativeEquivalence": "Prior native3534/3535: identical executable lines; only Items replay explanation changed"
+  "commentOnlyNativeEquivalence": "Prior native3534/3535: identical executable lines; only Items replay explanation changed",
+  "additionalGuides": {
+    "features": [
+      "player-values",
+      "statistics",
+      "achievements",
+      "inbox",
+      "friends",
+      "chat"
+    ],
+    "sourceManifestSha256": "120d0bb9a7ace8062f798fd7eba731df34826514c3ebedf7eabc302156ac2d32",
+    "native": "Full file compilation and actual Statistics O1/O2 HTTP race; hosted Develop timing remains separate"
+  }
 }
