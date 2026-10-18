@@ -45,6 +45,7 @@ public static class SeagullFeaturesSetup
 
     public static void Preflight()
     {
+        SeagullDevelopAcceptance.CheckFileGates(); // Pure file/target gates: no configuration or HTTP.
         string temp = Path.Combine(Path.GetTempPath(), "seagull-originals-" + Guid.NewGuid().ToString("N"));
         try
         {
