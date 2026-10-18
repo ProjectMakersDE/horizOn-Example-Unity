@@ -20,3 +20,16 @@ A permanent `.started` file is flushed before dispatch. A restart never redispat
 For TASK-1024, restore the original Unity guest credential in the owned Godot QA profile, compare the exact same player UUID, load R in both native clients, then verify JSON R→R+1, stale409, binary R+1→R+2, stale409, reload and JSON R+2→R+3. Preserve original bytes/revisions; never infer an empty save from an unreadable response. Publish actual Develop results only after the explicit Go and successful assertions.
 
 `SeagullFeaturesSetup.Preflight` compiles this entry with the complete native project and checks exact-target/approval/permanent-file gates without a manifest, session or HTTP request. Provider source CI and earlier synthetic transport tests remain separate evidence.
+
+The `guide` action invokes the complete published code files for all eleven current
+features: Player Values, Statistics, Achievements, Inbox, Friends, Groups, Items,
+Shared Objects, Matches, Chat and Marketplace. Statistics and Achievements require
+`allowWrites: true` in the private manifest and `confirm: true` in the original
+command. Chat requires the original canonical `channelId`; Marketplace requires
+the original canonical `listingId`. Every invocation uses the existing session.
+
+The result records the first actual feature HTTP response time and the observed
+response count. The two deliberate Statistics/Achievements calls must both return
+successful HTTP statuses. This measures a prepared SDK/project/session, not a fresh
+installation; DTO acceptance and authoritative business reconciliation are separate
+E4/E5 checks in the official Game and Hello. No source guide runs during startup.

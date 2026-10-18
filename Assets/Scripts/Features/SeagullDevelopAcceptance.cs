@@ -27,7 +27,7 @@ namespace SeagullStorm
         }
         [Serializable] public sealed class Command
         {
-            public string id, action, feature, operation, argumentsJson = "{}", dataBase64 = "", expectedRevision, displayName;
+            public string id, action, feature, operation, argumentsJson = "{}", dataBase64 = "", expectedRevision, displayName, channelId, listingId;
             public bool confirm;
         }
         [Serializable] public sealed class Result
@@ -36,7 +36,8 @@ namespace SeagullStorm
             // All result files are private. Never copy this field to public evidence.
             public string privateAnonymousToken;
             public bool success, conflict, found, invoked;
-            public long statusCode;
+            public long statusCode, lastStatusCode;
+            public int observedResponses;
             public double secondsToHttpResponse;
         }
         private Manifest _manifest;
@@ -108,7 +109,8 @@ namespace SeagullStorm
         {
             var h = HorizonManager.Instance;
             bool read = command.action == "loadJson" || command.action == "loadBinary" || command.action == "guide" || command.action == "capture" || command.action == "quit" || command.action == "restoreSaved";
-            if (!read && (!_manifest.allowWrites || !command.confirm)) { result.error = "EXPLICIT_DEVELOP_CONFIRMATION_REQUIRED"; return; }
+            bool guideWrites = command.action == "guide" && (command.feature == "statistics" || command.feature == "achievements");
+            if ((!read || guideWrites) && (!_manifest.allowWrites || !command.confirm)) { result.error = "EXPLICIT_DEVELOP_CONFIRMATION_REQUIRED"; return; }
             if (command.action == "createGuest")
             {
                 if (UserManager.Instance.IsSignedIn || UserManager.Instance.HasCachedAnonymousToken()) { result.error = "EXISTING_IDENTITY_REQUIRES_RESTORE"; return; }
@@ -138,19 +140,32 @@ namespace SeagullStorm
                     var payload = Convert.FromBase64String(command.dataBase64);
                     var write = command.action == "saveJson" ? await CloudSaveManager.Instance.Save(new UTF8Encoding(false, true).GetString(payload), revision) : await CloudSaveManager.Instance.SaveBytes(payload, revision);
                     result.success = write.IsSuccess; result.conflict = write.IsConflict; result.revision = write.Revision?.ToString(CultureInfo.InvariantCulture); result.statusCode = write.StatusCode; break;
-                case "guide": await ReadGuide(command.feature, result); break;
+                case "guide": await ReadGuide(command, result); break;
                 case "capture":
                     string image = Path.Combine(_manifest.controlDirectory, "results", command.id + ".png"); ScreenCapture.CaptureScreenshot(image); await Task.Delay(1000); result.success = File.Exists(image); break;
                 default: result.error = "UNKNOWN_ACTION"; break;
             }
         }
-        private async Task ReadGuide(string feature, Result result)
+        private async Task ReadGuide(Command command, Result result)
         {
-            string route = feature == "groups" ? "/groups" : feature == "items" ? "/items" : feature == "matches" ? "/matches" : feature == "shared-objects" ? "/shared-objects/" : throw new InvalidOperationException("Unknown complete guide");
+            string feature = command.feature;
+            string route = feature == "groups" ? "/groups" : feature == "items" ? "/items" : feature == "matches" ? "/matches" : feature == "shared-objects" ? "/shared-objects/"
+                : feature == "player-values" ? "/player-values" : feature == "statistics" ? "/statistics" : feature == "achievements" ? "/achievements"
+                : feature == "inbox" ? "/inbox" : feature == "friends" ? "/friends" : feature == "chat" ? "/chat/channels/" : feature == "marketplace" ? "/marketplace/" : throw new InvalidOperationException("Unknown complete guide");
+            int expectedResponses = feature == "statistics" || feature == "achievements" ? 2 : 1;
+            if (feature == "marketplace" && (!Guid.TryParseExact(command.listingId, "D", out var listing) || command.listingId != listing.ToString("D"))) throw new InvalidOperationException("Original canonical listing ID required");
+            if (feature == "chat" && (!Guid.TryParseExact(command.channelId, "D", out var channel) || command.channelId != channel.ToString("D"))) throw new InvalidOperationException("Original canonical channel ID required");
             bool invoked = false; var response = new TaskCompletionSource<long>(); var began = DateTimeOffset.UtcNow;
             bool Match(string url) => Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.GetLeftPart(UriPartial.Authority) == DevelopHost && uri.AbsolutePath.StartsWith("/api/v1/app" + route, StringComparison.Ordinal);
-            void Success(NetworkSuccessData value) { if (invoked && Match(value.Url)) response.TrySetResult(value.StatusCode); }
-            void Failure(NetworkErrorData value) { if (invoked && Match(value.Url)) response.TrySetResult(value.StatusCode); }
+            void Observe(string url, long status)
+            {
+                if (!invoked || !Match(url)) return;
+                if (++result.observedResponses == 1) { result.statusCode = status; result.secondsToHttpResponse = (DateTimeOffset.UtcNow - began).TotalSeconds; }
+                result.lastStatusCode = status;
+                if (status < 200 || status >= 300 || result.observedResponses >= expectedResponses) response.TrySetResult(status);
+            }
+            void Success(NetworkSuccessData value) => Observe(value.Url, value.StatusCode);
+            void Failure(NetworkErrorData value) => Observe(value.Url, value.StatusCode);
             EventService.Instance.Subscribe<NetworkSuccessData>(EventKeys.NetworkRequestSuccess, Success);
             EventService.Instance.Subscribe<NetworkErrorData>(EventKeys.NetworkRequestFailed, Failure);
             try
@@ -162,10 +177,21 @@ namespace SeagullStorm
                     case "items": gameObject.AddComponent<ItemsDemo>().ReadInventory(); break;
                     case "matches": gameObject.AddComponent<MatchesDemo>().ReadMyMatches(); break;
                     case "shared-objects": gameObject.AddComponent<SharedObjectsDemo>().ReadWorldMap(); break;
+                    case "player-values": gameObject.AddComponent<PlayerValuesDemo>().RunReviewedAction(); break;
+                    case "statistics": gameObject.AddComponent<StatisticsDemo>().RunReviewedAction(); break;
+                    case "achievements": gameObject.AddComponent<AchievementsDemo>().RunReviewedAction(); break;
+                    case "inbox": gameObject.AddComponent<InboxDemo>().RunReviewedAction(); break;
+                    case "friends": gameObject.AddComponent<FriendsDemo>().RunReviewedAction(); break;
+                    case "chat": gameObject.AddComponent<ChatDemo>().ReadChannelSnapshot(command.channelId); break;
+                    case "marketplace":
+                        var screen = gameObject.AddComponent<PM.horizOn.Cloud.Examples.Features.MarketplaceExample>();
+                        JsonUtility.FromJsonOverwrite("{\"projectId\":\"" + _manifest.projectId + "\"}", screen);
+                        var marketGuide = gameObject.AddComponent<MarketplaceDemo>(); marketGuide.screen = screen;
+                        _ = marketGuide.ReadListing(command.listingId); break;
                 }
                 if (await Task.WhenAny(response.Task, Task.Delay(TimeSpan.FromMinutes(5))) != response.Task) { result.error = "NO_HTTP_RESPONSE_WITHIN_FIVE_MINUTES"; return; }
-                result.statusCode = await response.Task; result.secondsToHttpResponse = (DateTimeOffset.UtcNow - began).TotalSeconds;
-                result.success = result.statusCode >= 200 && result.statusCode < 300; result.invoked = true;
+                result.lastStatusCode = await response.Task;
+                result.success = result.observedResponses >= expectedResponses && result.statusCode >= 200 && result.statusCode < 300 && result.lastStatusCode >= 200 && result.lastStatusCode < 300; result.invoked = true;
                 result.output = "Complete guide invoked in an existing native session. HTTP timing is separate from DTO/business acceptance.";
             }
             finally { EventService.Instance.Unsubscribe<NetworkSuccessData>(EventKeys.NetworkRequestSuccess, Success); EventService.Instance.Unsubscribe<NetworkErrorData>(EventKeys.NetworkRequestFailed, Failure); }
