@@ -14,7 +14,7 @@ namespace SeagullStorm
             SceneManager.LoadScene("TitleScene");
             bool featureFixture = false;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            featureFixture = SeagullFeatureFixtureSmoke.Enabled;
+            featureFixture = SeagullFeatureFixtureSmoke.Enabled || SeagullDevelopAcceptance.Enabled;
 #endif
             if (!SeagullSmoke.Enabled && !featureFixture) PrepareOnline();
         }
