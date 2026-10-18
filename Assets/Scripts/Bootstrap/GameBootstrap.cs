@@ -12,7 +12,11 @@ namespace SeagullStorm
             if (HorizonManager.Instance == null)
                 new GameObject("[HorizonManager]").AddComponent<HorizonManager>();
             SceneManager.LoadScene("TitleScene");
-            if (!SeagullSmoke.Enabled) PrepareOnline();
+            bool featureFixture = false;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            featureFixture = SeagullFeatureFixtureSmoke.Enabled;
+#endif
+            if (!SeagullSmoke.Enabled && !featureFixture) PrepareOnline();
         }
         private async void PrepareOnline()
         {

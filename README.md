@@ -20,11 +20,11 @@ The complete official Unity package is installed through Unity Package Manager:
 
 ```text
 com.projectmakers.horizon
-https://github.com/ProjectMakersDE/horizOn-SDK-Unity.git#c8af809820199fb0cf561d2ee4834a498c7b0810
-resolved commit c8af809820199fb0cf561d2ee4834a498c7b0810
+https://github.com/ProjectMakersDE/horizOn-SDK-Unity.git#991146900530bb1338452d4e6c233bcd5fe3bfd1
+resolved commit 991146900530bb1338452d4e6c233bcd5fe3bfd1
 ```
 
-Pinned to the verified Develop commit for TASK-1004, including Player Values, Statistics and Realtime. This is a development integration, not a released SDK version. `Packages/packages-lock.json` records the exact official package hash. The example targets the installed Unity 6000.6.3f1 and its resolved package/import versions.
+Pinned to the verified Develop commit containing the compact/configurable Player Values, Statistics, Inventory, Gift V2, Inbox, Marketplace, Groups/Friends, Matches, Shared Objects and Chat contracts. This is a development integration, not a released SDK version. `Packages/packages-lock.json` records the exact official package hash. The example targets the installed Unity 6000.6.3f1 and its resolved package/import versions.
 
 ## Connect your own project
 
@@ -43,7 +43,7 @@ Choose **SDK DEMOS** in the hub. Operations show loaded data, empty states or fa
 | Cloud Save | Session-bound load and save of signed-in progress; explicit save/readback demo |
 | Remote Config | Load all game balancing and validation settings when signed in |
 | News | Published in-project news through the demo panel and pause menu |
-| Gift Code | Validate then redeem, apply local reward, persist progress |
+| Gift Code | Prepare an exact V2 intent, confirm separately and retry the saved tuple; current server balances remain authoritative |
 | Feedback | Explicit user-written in-game feedback |
 | User Log | Run summaries and a repeated wave-one-death balancing warning |
 | Crash | Signed-in capture, breadcrumbs, state keys and caught exceptions |
@@ -54,7 +54,7 @@ Choose **SDK DEMOS** in the hub. Operations show loaded data, empty states or fa
 | Localization | EN/DE backend catalog; `ui.play` changes the hub Start Run label when supplied |
 | Email Sending | Explicit recipient user ID and template slug; **SEND EMAIL** queues a real configured template |
 
-Email Sending never runs automatically. Local QA does not sign in, redeem gifts, send feedback/email or write any production API data.
+Email Sending never runs automatically. Local native consumer QA uses synthetic loopback identities and gifts; it never sends email or writes hosted Develop/production data.
 
 The pinned leaderboard API supports board selection, Top, Around and Rank; it has no page-number/date-filter query API. These examples use the capabilities actually shipped by the package.
 
@@ -121,3 +121,17 @@ Native QA results and remaining integration checks are recorded in `QA.md`. Real
 ## License
 
 [MIT](LICENSE). The bundled Press Start 2P font remains under the SIL Open Font License; see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Shared generated art is documented in `ART-PROVENANCE.json`.
+
+## Current feature game and Hello
+
+The game and `Assets/Scenes/HelloFeatures.unity` use the exact official Develop package pin recorded in `Packages/manifest.json`. The standalone Hello has explicit connect, restore and guest actions; opening it does not contact a backend. From the game's hub choose **SDK DEMOS > Feature lab** for Achievements, Friends, Groups, Inbox, Items, Marketplace, Matches, Shared Objects and Chat. Enter the immutable project UUID from project settings when an SDK journal needs it. The binding is saved by project-key fingerprint and cannot be retargeted.
+
+Choose a read first, then copy reviewed IDs/revisions into the named argument object. Numeric revisions use canonical decimal strings. Shared bytes use Base64; group `json` is a complete JSON object. Empty catalogs and unavailable capabilities are server results, never filled with sample rewards. Changes and retries require separate clicks. Groups member-page defaults come from the current authenticated limits. Complex writes use the unmodified official SDK recipes and their durable originals; the game owns small Friends/Inbox/Achievement/Chat originals with an exclusive native file lease and exact UTF-8. A failed or malformed result preserves the original. Friends can acknowledge an old CAS command only after reading a permanently newer revision. Unknown originals are not replaced.
+
+Gift codes use **Prepare gift**, followed by a separate **Confirm / retry gift**. Preparation saves the original V2 campaign/count/configuration tuple. Restart and uncertain responses keep it. Current balances and inventory are read from the server; `giftData` is not converted into practice coins or another Cloud Save award. Old save fields remain readable. V1 and migration errors are shown explicitly.
+
+`Assets/Scripts/OfficialFeatureRecipes/SOURCE.json` identifies the unmodified imported helpers. `Assets/Scripts/HelloFeatures/MarketplaceDemo.cs` is the unchanged public quickstart, with separate read and confirmation methods. Native file journals intentionally reject browser writes; a WebGL game needs its own durable browser persister before enabling those lab writes.
+
+Validation is split deliberately. `python3 Scripts/verify_current_sdk.py --sdk-source /path/to/pinned-sdk` checks source provenance and runs in provider CI. The real local Unity6.6 compiler and original-store probe run with `-batchmode -nographics -quit -projectPath "$PWD" -executeMethod SeagullFeaturesSetup.Preflight`; this also creates the standalone Hello scene. The real isolated macOS Game and Hello builds passed the 19-request native consumer fixture, including a real process restart, exact Inbox/Gift retries, current item references and Int64 counts. A second rendered run passed both consumers; the game also passed the complete gameplay/cutout smoke with nine required captures. Hosted two-client Develop acceptance remains separate and pending. A green source job alone does not imply these native results. No Unity CI license is stored in this example repository.
+
+Four complete standalone public read guides for Groups, Items, Matches and Shared Objects are copied unchanged under `Assets/Scripts/PublicFeatureGuides`. Their `SOURCE.json` binds each exact Dashboard snippet to the pinned SDK. The native Unity6.6 compiler passed all four; none performs a startup connection or signup.

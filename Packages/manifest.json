@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "com.projectmakers.horizon": "https://github.com/ProjectMakersDE/horizOn-SDK-Unity.git#c8af809820199fb0cf561d2ee4834a498c7b0810",
+    "com.projectmakers.horizon": "https://github.com/ProjectMakersDE/horizOn-SDK-Unity.git#991146900530bb1338452d4e6c233bcd5fe3bfd1",
     "com.unity.2d.sprite": "1.0.0",
     "com.unity.2d.tilemap": "1.0.0",
     "com.unity.inputsystem": "1.20.0",

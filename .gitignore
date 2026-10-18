@@ -68,3 +68,7 @@ Thumbs.db
 
 # Local smoke screenshots
 /tmp/
+
+# Native/source verification helpers
+__pycache__/
+*.pyc
