@@ -211,6 +211,8 @@ namespace SeagullStorm
             InputSystem.QueueTextEvent(_keyboard, ' '); yield return KeyPress(Key.Enter);
             if (SeagullFeatureLab.Instance.Busy || SeagullFeatureLab.Instance.LastOutput != output) { Fail("Chat JSON editing executed an action"); yield break; }
             arguments.text = json;
+            if (!arguments.isFocused) yield return KeyPress(Key.Enter);
+            if (!arguments.isFocused) { Fail("JSON text editing was not active before Back"); yield break; }
             yield return KeyPress(Key.Escape); // Leave text editing before closing the menu.
             if (!SeagullFeatureLab.Instance.Visible) { Fail("Text Back closed its menu"); yield break; }
             yield return KeyPress(Key.Escape);
