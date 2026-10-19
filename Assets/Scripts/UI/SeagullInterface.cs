@@ -40,6 +40,7 @@ namespace SeagullStorm
         };
         private void Start()
         {
+            SeagullMenuNavigation.Ensure();
             _title = SceneManager.GetActiveScene().name == "TitleScene";
             if (HorizonManager.Instance == null) new GameObject("[HorizonManager]").AddComponent<HorizonManager>();
             if (_title)
@@ -63,6 +64,8 @@ namespace SeagullStorm
             homeRect.anchorMin = Vector2.zero; homeRect.anchorMax = Vector2.one; homeRect.sizeDelta = Vector2.zero;
             _home.AddComponent<CanvasGroup>();
             BuildHome();
+            Action homeBack = _title ? null : () => SceneManager.LoadScene("TitleScene");
+            SeagullMenuScope.Bind(_home, homeBack, _play);
             if (!_title)
             {
                 BuildDemo();
@@ -134,6 +137,7 @@ namespace SeagullStorm
             _feedback=Input(_demo.transform,"Feedback message",new Vector2(430,44),new Vector2(-300,-243));
             Button(_demo.transform,"Send feedback",new Vector2(150,44),new Vector2(-1,-243),()=>Run(SendFeedback));
             Text(_demo.transform,"Validated Actions: enable validated_runs_enabled in Remote Config.\nNo ticket means practice only. Input logs are review evidence.\nNo authoritative replay is claimed. Avatar IDs come from your catalog.",new Vector2(420,75),new Vector2(331,-259),14,GameColors.Sand);
+            SeagullMenuScope.Bind(_demo, ShowHome, _demo.transform.Find("Top 10").GetComponent<Button>());
             _demo.SetActive(false);
         }
         private void ShowPlayerValues()
@@ -280,14 +284,11 @@ namespace SeagullStorm
         {
             _demo.SetActive(false);
             _home.GetComponent<CanvasGroup>().interactable = true;
-            FocusControl(_play.IsInteractable() ? _play : _demoButton);
+            FocusControl(_demoButton);
         }
         public static void FocusControl(Button button)
         {
-            var events = EventSystem.current;
-            if (events == null) return;
-            events.firstSelectedGameObject = button != null ? button.gameObject : null;
-            events.SetSelectedGameObject(events.firstSelectedGameObject);
+            SeagullMenuNavigation.Focus(button);
         }
         private static void DisableLegacyCanvas(Canvas canvas)
         {
@@ -361,7 +362,7 @@ namespace SeagullStorm
         {
             var go=Panel(p,title,size,pos,GameColors.Orange);var b=go.AddComponent<Button>();go.AddComponent<SeagullSelectionOutline>();b.targetGraphic=go.GetComponent<Image>();var text=Text(go.transform,title,size-Vector2.one*8,Vector2.zero,18,GameColors.DarkBG,FontStyles.Bold);text.alignment=TextAlignmentOptions.Center;b.onClick.AddListener(()=>action());var colors=b.colors;colors.highlightedColor=GameColors.Sand;colors.pressedColor=GameColors.Teal;colors.disabledColor=new Color(.35f,.35f,.35f);b.colors=colors;return b;
         }
-        private static TMP_InputField Input(Transform p,string placeholder,Vector2 size,Vector2 pos)
+        internal static TMP_InputField Input(Transform p,string placeholder,Vector2 size,Vector2 pos)
         {
             var go=Panel(p,placeholder,size,pos,new Color32(0x31,0x31,0x31,255));var text=Text(go.transform,"",size-new Vector2(20,4),Vector2.zero,18,GameColors.LightText);var hint=Text(go.transform,placeholder,size-new Vector2(20,4),Vector2.zero,17,GameColors.Sand);var input=go.AddComponent<TMP_InputField>();input.textViewport=go.GetComponent<RectTransform>();input.textComponent=(TextMeshProUGUI)text;input.placeholder=hint;input.characterLimit=256;return input;
         }
