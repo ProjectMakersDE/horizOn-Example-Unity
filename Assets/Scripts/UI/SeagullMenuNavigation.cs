@@ -23,6 +23,7 @@ namespace SeagullStorm
         private GameObject _revealed;
         private int _tabDirection;
         private bool _cancel, _cancelEditing;
+        private TMP_Dropdown _cancelDropdown;
 
         public static SeagullMenuNavigation Ensure()
         {
@@ -61,6 +62,7 @@ namespace SeagullStorm
         {
             _cancel = true;
             _cancelEditing = SelectedInput?.isFocused == true;
+            _cancelDropdown = _top != null ? _top.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.IsExpanded) : null;
         }
         private void Update() => Refresh();
         private void LateUpdate()
@@ -70,8 +72,7 @@ namespace SeagullStorm
             {
                 _cancel = false; _tabDirection = 0;
                 if (_cancelEditing) { SelectedInput?.DeactivateInputField(); return; }
-                var dropdown = _top != null ? _top.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.IsExpanded) : null;
-                if (dropdown != null) { dropdown.Hide(); Select(dropdown); return; }
+                if (_cancelDropdown != null) { _cancelDropdown.Hide(); Select(_cancelDropdown); _cancelDropdown = null; return; }
                 if (_top != null) _top.Back?.Invoke();
                 else if (GameManager.Instance?.CurrentState == GameState.Run) GameManager.Instance.ChangeState(GameState.Paused);
                 return;
@@ -102,8 +103,16 @@ namespace SeagullStorm
             _top = top;
             foreach (var scope in active) { scope.Group.interactable = scope == top; scope.Group.blocksRaycasts = scope == top; }
             var dropdown = top != null ? top.GetComponentsInChildren<TMP_Dropdown>().FirstOrDefault(d => d.IsExpanded) : null;
-            var controls = top != null ? (dropdown != null ? dropdown.GetComponentsInChildren<Selectable>() : top.GetComponentsInChildren<Selectable>())
-                .Where(c => c.IsActive() && c.IsInteractable() && (dropdown == null || c != dropdown)).ToArray() : Array.Empty<Selectable>();
+            if (dropdown != null)
+            {
+                // TMP owns its popup's generated arrows/selection, including its delayed close.
+                // Keep Tab inside that popup without stealing the restored dropdown focus.
+                _controls = dropdown.GetComponentsInChildren<Selectable>().Where(c => c != dropdown && c.IsActive() && c.IsInteractable()).ToArray();
+                foreach (var control in _controls)
+                    if (control.GetComponent<SeagullSelectionOutline>() == null) control.gameObject.AddComponent<SeagullSelectionOutline>();
+                return;
+            }
+            var controls = top != null ? top.GetComponentsInChildren<Selectable>().Where(c => c.IsActive() && c.IsInteractable()).ToArray() : Array.Empty<Selectable>();
             if (changed || !_controls.SequenceEqual(controls))
             {
                 _controls = controls;
