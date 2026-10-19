@@ -141,14 +141,17 @@ namespace SeagullStorm
         private Selectable Nearest(Selectable origin, Vector2 direction)
         {
             var centre = origin.transform.TransformPoint(((RectTransform)origin.transform).rect.center);
-            float best = 0; Selectable result = null;
+            float best = 0; bool bestAligned = false; Selectable result = null;
             foreach (var candidate in _controls)
             {
                 if (candidate == origin) continue;
                 Vector2 delta = candidate.transform.TransformPoint(((RectTransform)candidate.transform).rect.center) - centre;
                 float dot = Vector2.Dot(delta, direction);
-                float score = dot > .01f ? dot / delta.sqrMagnitude : 0;
-                if (score > best) { best = score; result = candidate; }
+                if (dot <= .01f) continue;
+                bool aligned = Mathf.Approximately(Vector2.Dot(delta, new Vector2(-direction.y, direction.x)), 0);
+                float score = dot / delta.sqrMagnitude;
+                if ((aligned && !bestAligned) || (aligned == bestAligned && score > best))
+                { best = score; bestAligned = aligned; result = candidate; }
             }
             return result;
         }
