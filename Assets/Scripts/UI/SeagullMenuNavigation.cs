@@ -55,7 +55,7 @@ namespace SeagullStorm
         private TMP_InputField SelectedInput => _events.currentSelectedGameObject?.GetComponent<TMP_InputField>();
         private void OnTab(InputAction.CallbackContext context)
         {
-            _tabDirection = Keyboard.current?.shiftKey.isPressed == true ? -1 : 1;
+            _tabDirection = context.control.device is Keyboard keyboard && keyboard.shiftKey.isPressed ? -1 : 1;
             SelectedInput?.DeactivateInputField();
         }
         private void OnCancel(InputAction.CallbackContext context)
