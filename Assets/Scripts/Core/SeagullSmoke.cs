@@ -28,8 +28,11 @@ namespace SeagullStorm
         {
             float focusDeadline = Time.realtimeSinceStartup + 20f;
             Debug.Log("[SEAGULL SMOKE] Waiting for foreground focus (20 seconds).");
-            yield return new WaitUntil(() => Application.isFocused || Time.realtimeSinceStartup >= focusDeadline);
-            if (!Application.isFocused) { Fail("Foreground focus was not acquired within 20 seconds"); yield break; }
+            while (!Application.isFocused)
+            {
+                if (Time.realtimeSinceStartup >= focusDeadline) { Fail("Foreground focus was not acquired within 20 seconds"); yield break; }
+                yield return null;
+            }
             _keyboard = InputSystem.AddDevice<Keyboard>();
             _gamepad = InputSystem.AddDevice<Gamepad>();
             yield return new WaitUntil(()=>SceneManager.GetActiveScene().name=="TitleScene");
