@@ -1,6 +1,11 @@
 using System;
 using System.Collections;
 using System.IO;
+using TMPro;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
+using UnityEngine.UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 namespace SeagullStorm
@@ -17,15 +22,30 @@ namespace SeagullStorm
             PlayerPrefs.DeleteKey("seagull-storm.progress.qa.practice");
             var go = new GameObject("Practice smoke test"); DontDestroyOnLoad(go); go.AddComponent<SeagullSmoke>();
         }
+        private Keyboard _keyboard;
+        private Gamepad _gamepad;
         private IEnumerator Start()
         {
+            _keyboard = InputSystem.AddDevice<Keyboard>();
+            _gamepad = InputSystem.AddDevice<Gamepad>();
             yield return new WaitUntil(()=>SceneManager.GetActiveScene().name=="TitleScene");
             yield return new WaitForSecondsRealtime(2);
             if (!CheckFocus("PLAY OFFLINE", true)) yield break;
             ScreenCapture.CaptureScreenshot(CapturePath("title"));
             yield return new WaitForSecondsRealtime(.5f);
-            SceneManager.LoadScene("GameScene");
+            // Exercise the actual module, not Button.onClick, in the ordinary practice path.
+            yield return KeyPress(Key.Tab);
+            if (!CheckSelection("Pilot name")) yield break;
+            yield return KeyPress(Key.Enter);
+            if (SceneManager.GetActiveScene().name != "TitleScene") { Fail("Text Enter submitted the title menu"); yield break; }
+            yield return KeyPress(Key.LeftShift, Key.Tab);
+            if (!CheckFocus("PLAY OFFLINE", true)) yield break;
+            yield return Pad(new GamepadState().WithButton(GamepadButton.DpadRight));
+            if (!CheckSelection("Pilot name")) yield break;
+            yield return KeyPress(Key.LeftShift, Key.Tab);
+            yield return KeyPress(Key.Space);
             yield return new WaitForSecondsRealtime(2);
+            if (SceneManager.GetActiveScene().name != "GameScene") { Fail("Space did not enter practice"); yield break; }
             var gm=GameManager.Instance;
             if (gm==null || !gm.ProgressLoaded || HorizonManager.Instance.Online) { Fail("Offline hub failed");yield break; }
             try { PlayerValueIntentSmoke.Check(); }
@@ -37,34 +57,40 @@ namespace SeagullStorm
             yield return new WaitForSecondsRealtime(.5f);
             var sdkButton = GameObject.Find("SDK DEMOS")?.GetComponent<UnityEngine.UI.Button>();
             if (sdkButton == null) { Fail("SDK panel button missing"); yield break; }
-            sdkButton.onClick.Invoke();
+            yield return KeyPress(Key.Tab);
+            if (!CheckFocus("SDK DEMOS", true)) yield break;
+            yield return KeyPress(Key.Enter);
             yield return new WaitForSecondsRealtime(.3f);
             if (!CheckFocus("Top 10", true)) yield break;
             ScreenCapture.CaptureScreenshot(CapturePath("sdk"));
             yield return new WaitForSecondsRealtime(.5f);
-            GameObject.Find("Player values")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+            yield return TabTo("Player values");
+            yield return KeyPress(Key.Enter);
             yield return new WaitForSecondsRealtime(.3f);
             if (!CheckFocus("Read balances", true)) yield break;
             GameObject.Find("Read balances")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
             if (HorizonManager.Instance.Online) { Fail("Player values demo left offline practice"); yield break; }
             ScreenCapture.CaptureScreenshot(CapturePath("player-values"));
             yield return new WaitForSecondsRealtime(.5f);
-            GameObject.Find("BACK")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+            yield return KeyPress(Key.Escape);
             yield return null; // Re-enabled uGUI controls register for raycasting on the next rendered frame.
             if (!CheckFocus("Player values", true)) yield break;
-            GameObject.Find("Statistics")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+            yield return KeyPress(Key.Tab);
+            if (!CheckFocus("Statistics", true)) yield break;
+            yield return Pad(new GamepadState().WithButton(GamepadButton.South));
             yield return new WaitForSecondsRealtime(.3f);
             if (!CheckFocus("Read snapshot", true)) yield break;
             GameObject.Find("Read snapshot")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
             if (HorizonManager.Instance.Online) { Fail("Statistics demo left offline practice"); yield break; }
             ScreenCapture.CaptureScreenshot(CapturePath("statistics"));
             yield return new WaitForSecondsRealtime(.5f);
-            GameObject.Find("BACK")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+            yield return Pad(new GamepadState().WithButton(GamepadButton.East));
             yield return null;
             if (!CheckFocus("Statistics", true)) yield break;
+            yield return TextAndLabNavigation();
             gm.ProgressLoaded = false;
             yield return null;
-            GameObject.Find("Seagull interface/horizOn UI/SDK demos/CLOSE")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+            yield return KeyPress(Key.Escape);
             if (!CheckFocus("SDK DEMOS", true)) yield break;
             gm.ProgressLoaded = true;
             yield return null;
@@ -80,13 +106,16 @@ namespace SeagullStorm
             var start=PlayerController.Instance.transform.position;
             PlayerController.Instance.transform.position=start+Vector3.right*50;
             yield return new WaitForSecondsRealtime(1);
-            gm.ChangeState(GameState.Paused);float duration=gm.RunState.duration;
+            yield return KeyPress(Key.Escape);
+            if (gm.CurrentState != GameState.Paused) { Fail("Escape did not pause"); yield break; }
+            float duration=gm.RunState.duration;
             yield return new WaitForSecondsRealtime(.3f);
             if(Mathf.Abs(gm.RunState.duration-duration)>.01f){Fail("Pause advanced timer");yield break;}
             if (!CheckFocus("ResumeButton", true)) yield break;
             ScreenCapture.CaptureScreenshot(CapturePath("pause"));
             yield return new WaitForSecondsRealtime(.5f);
-            gm.ChangeState(GameState.Run);
+            yield return Pad(new GamepadState().WithButton(GamepadButton.East));
+            if (gm.CurrentState != GameState.Run) { Fail("Gamepad Back did not resume"); yield break; }
             WeaponManager.Instance.AddWeapon("screech");WeaponManager.Instance.AddWeapon("gust");
             PickupPool.Instance.SpawnXP(PlayerController.Instance.transform.position,30);
             yield return new WaitForSecondsRealtime(1);
@@ -94,7 +123,10 @@ namespace SeagullStorm
             if (!CheckFocus("LevelUpChoiceCard(Clone)", true)) yield break;
             ScreenCapture.CaptureScreenshot(CapturePath("levelup"));
             yield return new WaitForSecondsRealtime(.5f);
-            LevelUpManager.Instance.SelectChoice(new LevelUpChoice{id="max_hp",type="stat_boost"});
+            yield return KeyPress(Key.Escape);
+            if (gm.CurrentState != GameState.LevelUp) { Fail("Back skipped required choice"); yield break; }
+            yield return Pad(new GamepadState { leftStick = Vector2.right });
+            yield return Pad(new GamepadState().WithButton(GamepadButton.South));
             yield return new WaitForSecondsRealtime(3);
             // Random enemy XP may offer another level-up during the native run.
             for (int extra = 0; gm.CurrentState == GameState.LevelUp && extra < 5; extra++)
@@ -120,7 +152,10 @@ namespace SeagullStorm
             yield return new WaitForSecondsRealtime(.5f);
             int runs=gm.Save.totalRuns;gm.EndRun();
             if(gm.Save.totalRuns!=runs){Fail("Duplicate end rewarded twice");yield break;}
-            gm.ChangeState(GameState.Hub);gm.StartRun();yield return new WaitForSecondsRealtime(1);
+            yield return KeyPress(Key.Escape);
+            if (gm.CurrentState != GameState.Hub) { Fail("Game over Back did not return to hub"); yield break; }
+            yield return KeyPress(Key.Enter);
+            yield return new WaitForSecondsRealtime(1);
             if(gm.RunState.level!=1||gm.RunState.kills!=0||gm.RunState.activeWeapons.Count!=1){Fail("Replay reset failed");yield break;}
             gm.Config.BossWaveEnabled = true;
             var boss = EnemyPool.Instance.SpawnEnemy("boss", PlayerController.Instance.transform.position + Vector3.right * 80, PlayerController.Instance.transform);
@@ -132,6 +167,63 @@ namespace SeagullStorm
                 if (!File.Exists(CapturePath(capture))) { Fail("Screenshot missing: "+capture); yield break; }
             Debug.Log("[SEAGULL SMOKE] PASS: offline boot/hub/SDK panel, menu keyboard focus and unobstructed button raycasts, meta-upgrade affordability, start, pause, shell XP, level-up, weapon unlock, completion, duplicate-end guard replay reset and boss death/victory.");
             Application.Quit(0);
+        }
+        private IEnumerator KeyPress(params Key[] keys)
+        {
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState(keys));
+            yield return null; yield return null;
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState());
+            yield return null; yield return null;
+        }
+        private IEnumerator Pad(GamepadState state)
+        {
+            InputSystem.QueueStateEvent(_gamepad, state); yield return null; yield return null;
+            InputSystem.QueueStateEvent(_gamepad, new GamepadState()); yield return null; yield return null;
+        }
+        private IEnumerator TabTo(string target)
+        {
+            for (int i = 0; i < 64 && EventSystem.current.currentSelectedGameObject?.name != target; i++) yield return KeyPress(Key.Tab);
+            CheckSelection(target);
+        }
+        private IEnumerator TextAndLabNavigation()
+        {
+            yield return TabTo("Gift code");
+            var code = EventSystem.current.currentSelectedGameObject.GetComponent<TMP_InputField>();
+            string original = code.text; int prepared = 0;
+            UnityEngine.Events.UnityAction observe = () => prepared++;
+            var prepare = GameObject.Find("Prepare gift").GetComponent<Button>(); prepare.onClick.AddListener(observe);
+            code.text = "keyboard-only draft"; yield return KeyPress(Key.Enter);
+            prepare.onClick.RemoveListener(observe); code.text = original;
+            if (prepared != 0 || !CheckSelection("Gift code")) { Fail("Text Enter prepared a gift"); yield break; }
+            yield return TabTo("Feature lab"); yield return KeyPress(Key.Enter);
+            if (!CheckFocus("Back to game", true)) yield break;
+            yield return TabTo("Chat"); yield return KeyPress(Key.Enter);
+            yield return TabTo("Named arguments JSON");
+            var arguments = EventSystem.current.currentSelectedGameObject.GetComponent<TMP_InputField>();
+            string json = arguments.text, output = SeagullFeatureLab.Instance.LastOutput;
+            InputSystem.QueueTextEvent(_keyboard, ' '); yield return KeyPress(Key.Enter);
+            if (SeagullFeatureLab.Instance.Busy || SeagullFeatureLab.Instance.LastOutput != output) { Fail("Chat JSON editing executed an action"); yield break; }
+            arguments.text = json;
+            yield return KeyPress(Key.Escape); // Leave text editing before closing the menu.
+            if (!SeagullFeatureLab.Instance.Visible) { Fail("Text Back closed its menu"); yield break; }
+            yield return KeyPress(Key.Escape);
+            if (SeagullFeatureLab.Instance.Visible || !CheckFocus("Feature lab", true)) { Fail("Lab Back/return focus failed"); yield break; }
+            yield return KeyPress(Key.LeftArrow);
+            var selection = EventSystem.current.currentSelectedGameObject;
+            if (selection == null || !selection.transform.IsChildOf(GameObject.Find("SDK demos").transform)) Fail("Arrow navigation escaped active menu");
+            ScreenCapture.CaptureScreenshot(CapturePath("keyboard-lab"));
+        }
+        private static bool CheckSelection(string expected)
+        {
+            var selected = EventSystem.current.currentSelectedGameObject;
+            if (selected == null || selected.name != expected || selected.GetComponent<Selectable>()?.IsInteractable() != true || selected.GetComponent<Outline>()?.enabled != true)
+            { Fail("Input focus missing: " + expected); return false; }
+            return true;
+        }
+        private void OnDestroy()
+        {
+            if (_keyboard != null) InputSystem.RemoveDevice(_keyboard);
+            if (_gamepad != null) InputSystem.RemoveDevice(_gamepad);
         }
         private static string CapturePath(string name)
         {

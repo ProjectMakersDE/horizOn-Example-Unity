@@ -4,6 +4,9 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+using static SeagullStorm.SeagullInterface;
 using PM.horizOn.Cloud.Core;
 using PM.horizOn.Cloud.Manager;
 using PM.horizOn.Cloud.Objects.Network.Responses;
@@ -40,13 +43,18 @@ namespace SeagullStorm
         public string LastOutput { get; private set; } = "No network action has run.";
         private string _project = "", _collection = "levels", _arguments = "{}", _scope, _chatChannel;
         private int _feature;
-        private Vector2 _scroll, _actionsScroll;
-        private GUISkin _skin;
+        private GameObject _view;
+        private TMP_InputField _projectField, _collectionField, _argumentField, _outputField;
+        private Transform _actionList;
+        private readonly List<Button> _actionButtons = new List<Button>();
+        private readonly List<Button> _featureButtons = new List<Button>();
         private readonly Dictionary<Type, MonoBehaviour> _recipes = new Dictionary<Type, MonoBehaviour>();
         public static void Open()
         {
             if (Instance == null) new GameObject("Current SDK feature lab").AddComponent<SeagullFeatureLab>();
-            Instance.Visible = true;
+            Instance.BuildView(); Instance.Visible = true; Instance._view.SetActive(true);
+            Instance._projectField.SetTextWithoutNotify(Instance._project);
+            Instance._collectionField.SetTextWithoutNotify(Instance._collection);
         }
         public void Configure(string stableProjectUuid, string sharedCollection = "levels")
         {
@@ -54,39 +62,82 @@ namespace SeagullStorm
             _project = id.ToString("D"); _collection = sharedCollection;
         }
         private void Awake() { if (Instance != null && Instance != this) { Destroy(gameObject); return; } Instance = this; DontDestroyOnLoad(gameObject); }
-        private void OnGUI()
+        private void Hide() { Visible = false; if (_view != null) _view.SetActive(false); }
+        private void Update()
         {
             if (!Visible) return;
-            var previous = GUI.skin;
-            if (_skin == null)
+            if (GameManager.Instance == null || GameManager.Instance.CurrentState != GameState.Hub) { Hide(); return; }
+            foreach (var button in _actionButtons) button.interactable = !Busy;
+            if (_outputField.text != LastOutput) _outputField.SetTextWithoutNotify(LastOutput);
+        }
+        private void BuildView()
+        {
+            if (_view != null) return;
+            var canvasObject = new GameObject("Feature lab canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            canvasObject.transform.SetParent(transform, false);
+            var canvas = canvasObject.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 100;
+            var scaler = canvasObject.GetComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1280, 720); scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
+            _view = Panel(canvasObject.transform, "Current SDK feature lab", new Vector2(1230, 680), Vector2.zero, GameColors.DarkBG);
+            Text(_view.transform, "horizOn / CURRENT SDK FEATURE LAB", new Vector2(960, 34), new Vector2(-100, 310), 24, GameColors.Orange);
+            Text(_view.transform, "Existing signed-in player only. Configure the project first. Every write/retry is explicit; no automatic pages or reward copies.", new Vector2(1180, 30), new Vector2(0, 274), 14, GameColors.Sand);
+            var back = Button(_view.transform, "Back to game", new Vector2(150, 38), new Vector2(515, 308), Hide);
+            _projectField = Input(_view.transform, "Stable project UUID", new Vector2(760, 38), new Vector2(-205, 226));
+            _projectField.onValueChanged.AddListener(value => _project = value);
+            _collectionField = Input(_view.transform, "Shared collection", new Vector2(390, 38), new Vector2(395, 226));
+            _collectionField.onValueChanged.AddListener(value => _collection = value);
+            for (int i = 0; i < Features.Length; i++)
             {
-                _skin = Instantiate(GUI.skin);
-                _skin.label.fontSize = 16; _skin.label.wordWrap = true;
-                _skin.textArea.fontSize = 15; _skin.textArea.wordWrap = true;
-                _skin.textField.fontSize = 15; _skin.button.fontSize = 15;
-                _skin.label.normal.textColor = new Color(.93f, .92f, .88f);
+                int index = i;
+                var button = Button(_view.transform, Features[i], new Vector2(124, 38), new Vector2(-528 + i * 132, 174), () => SelectFeature(index));
+                button.GetComponentInChildren<TMP_Text>().fontSize = 15;
+                _featureButtons.Add(button);
             }
-            GUI.skin = _skin; GUI.color = Color.white;
-            GUI.backgroundColor = new Color(.15f, .17f, .17f);
-            GUILayout.BeginArea(new Rect(25, 25, Screen.width - 50, Screen.height - 50), GUI.skin.box);
-            GUILayout.Label("horizOn / CURRENT SDK FEATURE LAB");
-            GUILayout.Label("Existing signed-in player only. Configure the project first. Every write/retry is explicit; no automatic pages or reward copies.");
-            GUILayout.BeginHorizontal(); if (GUILayout.Button("Back to game", GUILayout.Width(150))) Visible = false;
-            GUILayout.Label("Stable project UUID:", GUILayout.Width(155)); _project = GUILayout.TextField(_project);
-            GUILayout.Label("Shared collection:", GUILayout.Width(135)); _collection = GUILayout.TextField(_collection, GUILayout.Width(120)); GUILayout.EndHorizontal();
-            _feature = GUILayout.Toolbar(_feature, Features);
-            GUILayout.BeginHorizontal();
-            _actionsScroll = GUILayout.BeginScrollView(_actionsScroll, GUILayout.Width(290));
-            GUI.enabled = !Busy;
-            foreach (string action in Actions[Features[_feature]])
-                if (GUILayout.Button(action, GUILayout.MinHeight(28))) _ = RunUi(Features[_feature], action);
-            GUI.enabled = true; GUILayout.EndScrollView();
-            GUILayout.BeginVertical();
-            GUILayout.Label("Named arguments (JSON). IDs/revision/requestId are original values; json carries a complete object, base64 carries opaque bytes.");
-            _arguments = GUILayout.TextArea(_arguments, GUILayout.Height(140));
-            if (GUILayout.Button("Show argument field template")) _arguments = JsonUtility.ToJson(new Arguments(), true);
-            _scroll = GUILayout.BeginScrollView(_scroll); GUILayout.TextArea(LastOutput); GUILayout.EndScrollView();
-            GUILayout.EndVertical(); GUILayout.EndHorizontal(); GUILayout.EndArea(); GUI.skin = previous;
+            var actions = Panel(_view.transform, "Feature actions", new Vector2(290, 470), new Vector2(-445, -98), new Color32(0x1C, 0x1C, 0x1C, 255));
+            actions.AddComponent<RectMask2D>();
+            var scroll = actions.AddComponent<ScrollRect>(); scroll.horizontal = false; scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.viewport = actions.GetComponent<RectTransform>();
+            var list = new GameObject("Actions", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            list.transform.SetParent(actions.transform, false); _actionList = list.transform;
+            var rect = list.GetComponent<RectTransform>(); rect.anchorMin = new Vector2(0, 1); rect.anchorMax = Vector2.one; rect.pivot = new Vector2(.5f, 1); rect.sizeDelta = Vector2.zero;
+            var layout = list.GetComponent<VerticalLayoutGroup>(); layout.spacing = 7; layout.padding = new RectOffset(8, 8, 8, 8);
+            layout.childControlHeight = true; layout.childControlWidth = true; layout.childForceExpandHeight = false;
+            list.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            scroll.content = rect;
+            Text(_view.transform, "Named arguments (JSON). Keep original IDs/revision/requestId." + "\njson carries the complete object; base64 carries opaque bytes.", new Vector2(860, 48), new Vector2(160, 106), 16, GameColors.Sand);
+            _argumentField = LargeField("Named arguments JSON", new Vector2(860, 148), new Vector2(160, 0), false);
+            _argumentField.SetTextWithoutNotify(_arguments); _argumentField.onValueChanged.AddListener(value => _arguments = value);
+            Button(_view.transform, "Show argument field template", new Vector2(860, 36), new Vector2(160, -100), () =>
+            { _arguments = JsonUtility.ToJson(new Arguments(), true); _argumentField.SetTextWithoutNotify(_arguments); });
+            _outputField = LargeField("Current result", new Vector2(860, 202), new Vector2(160, -224), true);
+            _outputField.SetTextWithoutNotify(LastOutput);
+            SeagullMenuScope.Bind(_view, Hide, back);
+            SelectFeature(_feature); _view.SetActive(false);
+        }
+        private TMP_InputField LargeField(string title, Vector2 size, Vector2 position, bool readOnly)
+        {
+            var field = Input(_view.transform, title, size, position);
+            field.characterLimit = 0; field.lineType = TMP_InputField.LineType.MultiLineNewline; field.readOnly = readOnly;
+            field.textComponent.richText = false; field.textComponent.alignment = TextAlignmentOptions.TopLeft;
+            field.gameObject.AddComponent<RectMask2D>();
+            return field;
+        }
+        private void SelectFeature(int index)
+        {
+            _feature = index;
+            // Old controls leave the active navigation set immediately, before deferred Destroy.
+            foreach (Transform child in _actionList) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
+            _actionButtons.Clear();
+            foreach (string action in Actions[Features[index]])
+            {
+                string selectedAction = action;
+                var button = Button(_actionList, action, new Vector2(270, 38), Vector2.zero, () => { _ = RunUi(Features[_feature], selectedAction); });
+                var layout = button.gameObject.AddComponent<LayoutElement>(); layout.preferredHeight = 42;
+                _actionButtons.Add(button);
+            }
+            for (int i = 0; i < _featureButtons.Count; i++)
+                _featureButtons[i].GetComponent<Image>().color = i == index ? GameColors.Teal : GameColors.Orange;
+            _actionList.parent.GetComponent<ScrollRect>().verticalNormalizedPosition = 1;
         }
         private async Task RunUi(string feature, string action)
         {
@@ -324,6 +375,6 @@ namespace SeagullStorm
             return Show(data, ok ? null : code);
         }
         private static string Empty(string value) => string.IsNullOrEmpty(value) ? null : value;
-        private void OnDestroy() { if (_skin != null) Destroy(_skin); if (Instance == this) Instance = null; }
+        private void OnDestroy() { if (Instance == this) Instance = null; }
     }
 }

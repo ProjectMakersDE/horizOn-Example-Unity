@@ -34,6 +34,7 @@ namespace SeagullStorm
             Button(_panel.transform, "Retry original batch", new Vector2(280, 44), new Vector2(280, 195), () => Run(Send));
             _text = Text(_panel.transform, "", new Vector2(1090, 410), new Vector2(0, -65), 20, GameColors.LightText);
             _text.alignment = TextAlignmentOptions.TopLeft; _text.richText = false;
+            SeagullMenuScope.Bind(_panel, () => { Hide(); close(); }, _panel.transform.Find("Read snapshot").GetComponent<UnityEngine.UI.Button>());
         }
 
         public void Show()

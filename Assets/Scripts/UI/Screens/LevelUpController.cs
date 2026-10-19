@@ -70,6 +70,8 @@ namespace SeagullStorm
                 int idx = i;
                 if (button != null) button.onClick.AddListener(() => OnSelect(idx));
             }
+            // Back cannot silently choose or skip a required level-up.
+            SeagullMenuScope.Bind(gameObject, () => SeagullInterface.FocusControl(firstChoice), firstChoice);
             SeagullInterface.FocusControl(firstChoice);
         }
 

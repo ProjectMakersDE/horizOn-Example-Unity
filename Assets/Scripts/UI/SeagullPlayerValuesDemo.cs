@@ -42,6 +42,7 @@ namespace SeagullStorm
             Button(_panel.transform, "Retry pending", new Vector2(190,44), new Vector2(445,195), () => Run(Send));
             _text = Text(_panel.transform, "", new Vector2(1090,410), new Vector2(0,-65), 20, GameColors.LightText);
             _text.alignment = TextAlignmentOptions.TopLeft; _text.richText = false;
+            SeagullMenuScope.Bind(_panel, () => { Hide(); close(); }, _panel.transform.Find("Read balances").GetComponent<UnityEngine.UI.Button>());
         }
 
         private static PlayerValueIntentStore CurrentStore() => new PlayerValueIntentStore(
