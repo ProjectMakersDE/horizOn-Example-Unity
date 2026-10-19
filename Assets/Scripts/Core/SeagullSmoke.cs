@@ -217,7 +217,13 @@ namespace SeagullStorm
         {
             var selected = EventSystem.current.currentSelectedGameObject;
             if (selected == null || selected.name != expected || selected.GetComponent<Selectable>()?.IsInteractable() != true || selected.GetComponent<Outline>()?.enabled != true)
-            { Fail("Input focus missing: " + expected); return false; }
+            {
+                Fail("Input focus missing: " + expected + "; selected=" + (selected != null ? selected.name : "<none>")
+                    + "; interactable=" + (selected?.GetComponent<Selectable>()?.IsInteractable().ToString() ?? "<missing>")
+                    + "; outline=" + (selected?.GetComponent<Outline>()?.enabled.ToString() ?? "<missing>")
+                    + "; appFocused=" + Application.isFocused);
+                return false;
+            }
             return true;
         }
         private void OnDestroy()
