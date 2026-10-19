@@ -59,7 +59,7 @@ namespace SeagullStorm
             if (SeagullSmoke.Enabled)
             {
                 var sourceKeyboard = context.control.device as Keyboard;
-                Debug.Log($"[SEAGULL SMOKE TAB] frame={Time.frameCount}; nav={GetInstanceID()}; events={_events.GetInstanceID()}; device={context.control.device.deviceId}; shift={sourceKeyboard?.shiftKey.isPressed}; leftShift={sourceKeyboard?.leftShiftKey.isPressed}; rightShift={sourceKeyboard?.rightShiftKey.isPressed}; direction={_tabDirection}; before={_events.currentSelectedGameObject?.name}");
+                Debug.Log($"[SEAGULL SMOKE TAB] frame={Time.frameCount}; nav={GetEntityId()}; events={_events.GetEntityId()}; device={context.control.device.deviceId}; shift={sourceKeyboard?.shiftKey.isPressed}; leftShift={sourceKeyboard?.leftShiftKey.isPressed}; rightShift={sourceKeyboard?.rightShiftKey.isPressed}; direction={_tabDirection}; before={_events.currentSelectedGameObject?.name}");
             }
             SelectedInput?.DeactivateInputField();
         }
@@ -86,10 +86,10 @@ namespace SeagullStorm
             {
                 int current = Array.FindIndex(_controls, c => c.gameObject == _events.currentSelectedGameObject);
                 if (SeagullSmoke.Enabled)
-                    Debug.Log($"[SEAGULL SMOKE TAB APPLY] frame={Time.frameCount}; nav={GetInstanceID()}; events={_events.GetInstanceID()}; before={_events.currentSelectedGameObject?.name}; index={current}; direction={_tabDirection}; controls={string.Join(",", _controls.Select(c => c.name))}");
+                    Debug.Log($"[SEAGULL SMOKE TAB APPLY] frame={Time.frameCount}; nav={GetEntityId()}; events={_events.GetEntityId()}; before={_events.currentSelectedGameObject?.name}; index={current}; direction={_tabDirection}; controls={string.Join(",", _controls.Select(c => c.name))}");
                 Select(_controls[(current + _tabDirection + _controls.Length) % _controls.Length]);
                 if (SeagullSmoke.Enabled)
-                    Debug.Log($"[SEAGULL SMOKE TAB APPLIED] frame={Time.frameCount}; nav={GetInstanceID()}; events={_events.GetInstanceID()}; after={_events.currentSelectedGameObject?.name}");
+                    Debug.Log($"[SEAGULL SMOKE TAB APPLIED] frame={Time.frameCount}; nav={GetEntityId()}; events={_events.GetEntityId()}; after={_events.currentSelectedGameObject?.name}");
             }
             _tabDirection = 0;
             var selected = _events.currentSelectedGameObject?.GetComponent<Selectable>();
