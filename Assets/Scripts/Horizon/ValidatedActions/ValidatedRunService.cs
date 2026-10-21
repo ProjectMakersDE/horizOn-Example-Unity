@@ -48,8 +48,8 @@ namespace SeagullStorm
     /// <summary>
     /// Validated Actions for Seagull Storm: start a server-checked run and submit its result.
     ///
-    /// This assembly targets the pinned official horizOn SDK package. The real calls are available
-    /// in the pinned release. Historic version defines are no longer needed.
+    /// This assembly targets the pinned official horizOn SDK source snapshot. The real calls are
+    /// available in that snapshot; it is not a claim that every feature has been released.
     /// The first SDK release with
     /// Validated Actions is 1.9.0 (TASK-883).
     /// Requested validated runs never fall back to plain score submissions.

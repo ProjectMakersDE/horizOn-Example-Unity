@@ -52,10 +52,26 @@ jobs:
             echo "Tag v${VERSION} not found in ${SDK_REPO}" >&2
             exit 1
           fi
-          gh api "repos/${SDK_REPO}/contents/package.json?ref=v${VERSION}" --jq .content \
-            | base64 -d > "$RUNNER_TEMP/sdk-package.json"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout the exact candidate SDK source
+        uses: actions/checkout@v4
+        with:
+          repository: ProjectMakersDE/horizOn-SDK-Unity
+          ref: ${{ steps.sdk.outputs.hash }}
+          path: sdk-source
+          persist-credentials: false
+
+      - name: Reject releases missing the game's required contracts
+        env:
+          HASH: ${{ steps.sdk.outputs.hash }}
+        run: |
+          set -euo pipefail
+          test "$(git -C sdk-source rev-parse HEAD)" = "$HASH"
+          python3 Scripts/verify_sdk_contracts.py --sdk-source sdk-source
+          cp sdk-source/package.json "$RUNNER_TEMP/sdk-package.json"
+          rm -rf sdk-source
 
       - name: Pin SDK release in the package manifest
         env:

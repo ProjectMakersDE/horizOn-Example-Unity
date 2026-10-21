@@ -114,6 +114,8 @@ Unity -batchmode -nographics -projectPath . -executeMethod SeagullBuild.Build -l
 
 `SeagullBuild.Build` creates a Development macOS player using the installed Mono backend and restores the project's configured backend afterward. IL2CPP is not installed on the test Mac. The opt-in smoke player forces practice, uses a separate QA progress namespace, captures title/hub/SDK panel/pause/level-up/run/game-over screenshots in an ignored `tmp/` folder, and checks meta-upgrade affordability, pause, XP/level-up, weapons, completion, duplicate-end protection, replay reset and boss victory. It never connects a backend.
 
+The SDK release-update workflow checks the exact candidate source for the Player Values, Statistics, guest recovery and Validated Actions contracts used by this game before changing either package pin. Run that bounded check with `python3 Scripts/verify_sdk_contracts.py --sdk-source /path/to/horizOn-SDK-Unity`. It checks selected public declarations; native import, overload compatibility, build, export and player smoke still require Unity. This repository currently has no native Unity CI gate.
+
 The same native smoke checks the seven gull and nine crab joints, movement and facing, actual feather/contact attack poses, damage tint across parts, pause and pool reuse. `[CUTOUT SMOKE] PASS` confirms those runtime checks separately from the general gameplay smoke.
 
 Native QA results and remaining integration checks are recorded in `QA.md`. Real session authentication, validated rejection/evidence, cloud roundtrips, cosmetics, localization templates and email delivery require a dedicated project configuration and are not asserted from offline checks. This work does not close the broader TASK-615 integration gate.

@@ -1,0 +1,52 @@
+name: Verify SDK Source
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  source-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the committed SDK pin
+        id: sdk
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+
+          name = "com.projectmakers.horizon"
+          url = json.load(open("Packages/manifest.json"))["dependencies"][name]
+          lock = json.load(open("Packages/packages-lock.json"))["dependencies"][name]
+          prefix = "https://github.com/ProjectMakersDE/horizOn-SDK-Unity.git#"
+          assert url.startswith(prefix), "SDK must use the official repository"
+          ref = url[len(prefix):]
+          assert re.fullmatch(r"[0-9a-f]{40}|v[0-9]+\.[0-9]+\.[0-9]+", ref), "Expected a commit or release tag"
+          assert lock["version"] == url, "SDK lock and manifest disagree"
+          assert re.fullmatch(r"[0-9a-f]{40}", lock["hash"]), "Expected a locked SDK commit"
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"ref={ref}\nhash={lock['hash']}\n")
+          PY
+
+      - name: Checkout the pinned official SDK source
+        uses: actions/checkout@v4
+        with:
+          repository: ProjectMakersDE/horizOn-SDK-Unity
+          ref: ${{ steps.sdk.outputs.ref }}
+          path: sdk-source
+          persist-credentials: false
+
+      - name: Verify source identity and required contracts
+        env:
+          HASH: ${{ steps.sdk.outputs.hash }}
+        run: |
+          test "$(git -C sdk-source rev-parse HEAD)" = "$HASH"
+          python3 Scripts/verify_sdk_contracts.py --sdk-source sdk-source
