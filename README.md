@@ -6,7 +6,7 @@ The shared square-headed seagull and island artwork use the horizOn charcoal, cr
 
 ## Open and play
 
-1. Clone the repository and open it in **Unity 6000.6.3f1**.
+1. Clone the repository and open it in **Unity 6000.6.3f1** or **6000.5.0f1**.
 2. Open `Assets/Scenes/BootScene.unity` and press Play.
 3. Choose **PLAY OFFLINE** for a fully playable practice game, or sign in for online features.
 
@@ -24,7 +24,7 @@ https://github.com/ProjectMakersDE/horizOn-SDK-Unity.git#c8af809820199fb0cf561d2
 resolved commit c8af809820199fb0cf561d2ee4834a498c7b0810
 ```
 
-Pinned to the verified Develop commit for TASK-1004, including Player Values, Statistics and Realtime. This is a development integration, not a released SDK version. `Packages/packages-lock.json` records the exact official package hash. The example targets the installed Unity 6000.6.3f1 and its resolved package/import versions.
+Pinned to the verified Develop commit for TASK-1004, including Player Values, Statistics and Realtime. This is a development integration, not a released SDK version. `Packages/packages-lock.json` records the exact official package hash. The project records Unity 6000.6.3f1 and also supports the tested Unity 6000.5.0f1 import/export path. The unused Tetgen package is omitted, and the URP Global Settings asset is generated in the 17.5 format so both editors can load it; 6000.6 upgrades its built-in resources during import. The original volume profile, rendering layers, renderer, scenes and game code are retained.
 
 ## Connect your own project
 
@@ -118,7 +118,9 @@ The SDK release-update workflow checks the exact candidate source for the Player
 
 The same native smoke checks the seven gull and nine crab joints, movement and facing, actual feather/contact attack poses, damage tint across parts, pause and pool reuse. `[CUTOUT SMOKE] PASS` confirms those runtime checks separately from the general gameplay smoke.
 
-Native QA results and remaining integration checks are recorded in `QA.md`. Real session authentication, validated rejection/evidence, cloud roundtrips, cosmetics, localization templates and email delivery require a dedicated project configuration and are not asserted from offline checks. This work does not close the broader TASK-615 integration gate.
+On 2026-10-22, Unity 6000.5.0f1 passed native import, scene validation and a Mono Development macOS Universal2 export; its player passed the existing smoke on an ARM64 Mac. Unity 6000.6.3f1 passed scene validation, a Mono Development ARM64 export and the same player smoke. Both players produced all four success markers and nine required captures. This verifies ARM64 execution; x86_64 execution and a clean-machine installation remain untested. A separate 6000.6 Universal2 build failed when Burst tried to execute the installed editor's non-executable `llvm-lipo`; the ARM64 build uses the previously verified target without modifying the editor.
+
+Native QA history and remaining integration checks are recorded in `QA.md`. Real session authentication, validated rejection/evidence, cloud roundtrips, cosmetics, localization templates and email delivery require a dedicated project configuration and are not asserted from offline checks. This work does not close the broader TASK-615 integration gate.
 
 ## License
 
