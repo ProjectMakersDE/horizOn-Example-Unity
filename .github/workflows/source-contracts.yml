@@ -1,9 +1,9 @@
 name: Current Example Source Contracts
 on:
   push:
-    branches: [main, develop]
+    branches: [release, develop]
   pull_request:
-    branches: [main, develop]
+    branches: [release, develop]
 permissions:
   contents: read
 jobs:

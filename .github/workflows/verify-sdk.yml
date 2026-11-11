@@ -2,9 +2,9 @@ name: Verify SDK Source
 
 on:
   push:
-    branches: [main]
+    branches: [release, develop]
   pull_request:
-    branches: [main]
+    branches: [release, develop]
 
 permissions:
   contents: read
