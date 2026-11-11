@@ -28,6 +28,7 @@ namespace SeagullStorm
             if (hubButton != null) hubButton.onClick.AddListener(OnHub);
 
             ShowStats();
+            SeagullMenuScope.Bind(gameObject, OnHub, playAgainButton);
             SeagullInterface.FocusControl(playAgainButton);
         }
 
@@ -64,6 +65,7 @@ namespace SeagullStorm
             }
             if (!isActiveAndEnabled || GameManager.Instance?.RunGeneration != runGeneration) return;
             if (playAgainButton != null) playAgainButton.interactable = !GameManager.Instance.RunSubmissionPending;
+            if (playAgainButton != null && playAgainButton.interactable) SeagullInterface.FocusControl(playAgainButton);
             // The result canvas activates before rewards are calculated; refresh after that lifecycle completes.
             if (bestScoreText != null) bestScoreText.text = $"Best: {save.highscore:N0}";
             if (coinsEarnedText != null) coinsEarnedText.text = $"Coins: +{run.coinsEarned}";

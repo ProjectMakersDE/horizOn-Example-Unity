@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using PM.horizOn.Cloud.Core;
 using PM.horizOn.Cloud.Manager;
+using PM.horizOn.Cloud.Examples.Features;
 using PM.horizOn.Cloud.Objects.Network.Requests;
 using PM.horizOn.Cloud.Objects.Network.Responses;
 namespace SeagullStorm
@@ -166,8 +167,56 @@ namespace SeagullStorm
         public Task<int?> StartValidatedRun(string board) => SessionCall(() => ValidatedRunService.StartRun(board));
         public Task<ValidatedRunOutcome> SubmitValidatedRun(long score, byte[] evidence, string stage, string coinsKey, long earned) => SessionCall(() => ValidatedRunService.Submit(score, evidence, stage, coinsKey, earned));
         public Task<List<UserNewsResponse>> LoadNews() => SessionCall(() => NewsManager.Instance.LoadNews(5, "en"));
-        public Task<bool?> ValidateGiftCode(string code) => SessionCall(() => GiftCodeManager.Instance.Validate(code));
-        public Task<RedeemGiftCodeResponse> RedeemGiftCode(string code) => SessionCall(() => GiftCodeManager.Instance.Redeem(code));
+        public bool GiftInFlight { get; private set; }
+        public string LastGiftError { get; private set; }
+        public bool ReadPendingGift(out GiftCodeIntent intent)
+        {
+            intent = null;
+            return Online && GiftCodeSampleStore.TryLoad(HorizonApp.Network.GetApiKey(), GetUserId(), out intent);
+        }
+        public async Task<GiftCodeIntent> PrepareGiftCode(string code)
+        {
+            LastGiftError = null;
+            if (!Online || GiftInFlight) { LastGiftError = "SESSION_REQUIRED_OR_BUSY"; return null; }
+            GiftInFlight = true;
+            try
+            {
+                int generation = Generation; string user = GetUserId();
+                var network = HorizonApp.Network; long epoch = network.ContextGeneration; string project = network.GetApiKey();
+                if (!GiftCodeSampleStore.TryLoad(project, user, out var previous)) { LastGiftError = "PENDING_STORAGE_ERROR"; return null; }
+                if (previous != null) { LastGiftError = "PENDING_GIFT_EXISTS"; return null; }
+                var intent = await GiftCodeManager.Instance.PrepareRedemption(code);
+                if (!IsCurrent(generation, user) || !ReferenceEquals(network, HorizonApp.Network) || epoch != network.ContextGeneration)
+                { LastGiftError = "STALE_RESPONSE"; return null; }
+                if (intent == null) { LastGiftError = GiftCodeManager.Instance.LastErrorCode; return null; }
+                if (!GiftCodeSampleStore.Save(project, intent)) { LastGiftError = "PENDING_STORAGE_ERROR"; return null; }
+                return intent.Copy(); // This GET-like prepare step never redeems.
+            }
+            catch (Exception) { LastGiftError = "PENDING_STORAGE_ERROR"; return null; }
+            finally { GiftInFlight = false; }
+        }
+        public async Task<RedeemGiftCodeResponse> RedeemPendingGift()
+        {
+            LastGiftError = null;
+            if (!Online || GiftInFlight) { LastGiftError = "SESSION_REQUIRED_OR_BUSY"; return null; }
+            GiftInFlight = true;
+            try
+            {
+                int generation = Generation; string user = GetUserId();
+                var network = HorizonApp.Network; long epoch = network.ContextGeneration; string project = network.GetApiKey();
+                if (!GiftCodeSampleStore.TryLoad(project, user, out var intent) || intent == null)
+                { LastGiftError = "PENDING_GIFT_REQUIRED"; return null; }
+                var result = await GiftCodeManager.Instance.RedeemPrepared(intent);
+                if (!IsCurrent(generation, user) || !ReferenceEquals(network, HorizonApp.Network) || epoch != network.ContextGeneration)
+                { LastGiftError = "STALE_RESPONSE"; return null; }
+                if (result == null) { LastGiftError = GiftCodeManager.Instance.LastErrorCode; return null; }
+                if (!GiftCodeSampleStore.Confirm(project, intent)) { LastGiftError = "CONFIRMATION_STORAGE_ERROR"; return null; }
+                // The SDK adopted authoritative balances. Never parse giftData into local coins.
+                return result;
+            }
+            catch (Exception) { LastGiftError = "PENDING_STORAGE_ERROR"; return null; }
+            finally { GiftInFlight = false; }
+        }
         public Task<bool> SubmitFeedback(string title, string message, string category, string email = null) => SessionCall(() => FeedbackManager.Instance.Submit(title, category, message, email, includeDeviceInfo: true));
         public Task<SendEmailResponse> SendEmail(string recipient, string template, string language) => SessionCall(() => EmailSendingManager.Instance.SendEmail(recipient, template, new Dictionary<string, string>(), language));
         public async Task LogRunEnd(string message) { if (Online) await UserLogManager.Instance.Info(message); }

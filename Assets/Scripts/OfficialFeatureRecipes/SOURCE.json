@@ -1,0 +1,24 @@
+{
+  "repository": "https://github.com/ProjectMakersDE/horizOn-SDK-Unity",
+  "commit": "991146900530bb1338452d4e6c233bcd5fe3bfd1",
+  "sourceDirectory": "Samples~/Examples/Features",
+  "files": {
+    "AchievementsExample.cs": "6620c7b7db260da4dabae3ef3f18b29bef127049b854ba97d65c13719829dcb6",
+    "ChatExample.cs": "485b94397c4db63978b76756982d6d7ef0e52baf724bd0f91ac90feabe3bec5e",
+    "FriendsExample.cs": "941bb6527de95097387c28abc21eb947f536226c450c2f74b5005cb1a278cf03",
+    "GiftCodeSampleStore.cs": "21f163cb61be6b289014520b82c7466cd49798206357b1fca4fb91e2f2646567",
+    "GroupsExample.cs": "8bd3fadbc7e77d0814c305bd3085f9ea0e285f1efe263b44f5325f9b5e6bfdb4",
+    "GroupsSampleStore.cs": "627b6a080f510458c9d52e3ae91ec83944d27250772da6ef6cd0aa32cce9894e",
+    "ItemsExample.cs": "3fee550c285339bfdaf0e7aa05265ac4fdb1431917485a40f1755358f2b325cb",
+    "ItemsSampleStore.cs": "6b291251cb6517f3700defa5d9b15c10a777f3552e208743f0f83dec2c38673e",
+    "MarketplaceExample.cs": "d136cd5e9be0339ff618b0c12936360f2fd2ccf3d2c6c19a5358e7d69437b1c3",
+    "MarketplaceQuickstart.cs": "44b43c5b12bff4ae17dd05074d7bf4ee1e29c108ce63f303a88a77d656b975e8",
+    "MarketplaceSampleStore.cs": "ee392ab671d941b593728c581fb810c633057b03e7998246ceef61f9285f6596",
+    "MatchesExample.cs": "51676b883b2202ad5c900629cd2daabef2757ccb362dca8bcccaf1baacfb1fb1",
+    "MatchesSampleStore.cs": "03cf05c2fd812ddecef986f96896a46ef13c580528aae9a71a43f8c8c8674a1b",
+    "SharedObjectsExample.cs": "6068dffdcf7aa7bb1ac2da242b29142ae5cbbf4bfba3f1ed28c02c8f95eff536",
+    "SharedObjectsSampleStore.cs": "355e79d8145cb91bd1c8ba330d27499f2fe3fff4aea3c83695f64a205b021f92"
+  },
+  "excludedStandaloneGiftComponent": "The game uses GiftCodeSampleStore directly; its existing session never triggers a standalone sample signup.",
+  "scope": "Unmodified existing-session recipes/helpers only. Standalone bootstraps are deliberately not attached or copied."
+}

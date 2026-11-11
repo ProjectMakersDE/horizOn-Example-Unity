@@ -25,6 +25,7 @@ namespace SeagullStorm
             if (newsButton != null) newsButton.onClick.AddListener(OnNews);
             if (feedbackButton != null) feedbackButton.onClick.AddListener(OnFeedback);
             if (quitButton != null) quitButton.onClick.AddListener(OnQuit);
+            SeagullMenuScope.Bind(gameObject, OnBack, resumeButton);
             SeagullInterface.FocusControl(resumeButton);
         }
 
@@ -81,14 +82,13 @@ namespace SeagullStorm
             GameManager.Instance.EndRun();
         }
 
-        private void Update()
+        private void OnBack()
         {
-            if (GameManager.Instance == null || GameManager.Instance.CurrentState != GameState.Paused) return;
-
-            if (Input.GetKeyDown(KeyCode.Escape))
-            {
-                OnResume();
-            }
+            if (feedbackForm != null && feedbackForm.gameObject.activeSelf)
+            { feedbackForm.gameObject.SetActive(false); SeagullInterface.FocusControl(feedbackButton); }
+            else if (newsPanel != null && newsPanel.activeSelf)
+            { newsPanel.SetActive(false); SeagullInterface.FocusControl(newsButton); }
+            else OnResume();
         }
     }
 }

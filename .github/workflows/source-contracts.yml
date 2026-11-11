@@ -1,0 +1,26 @@
+name: Current Example Source Contracts
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+permissions:
+  contents: read
+jobs:
+  source-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - id: sdk
+        name: Resolve the exact package source pin
+        run: python3 Scripts/verify_current_sdk.py --print-sdk-commit | sed 's/^/sha=/' >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: ProjectMakersDE/horizOn-SDK-Unity
+          ref: ${{ steps.sdk.outputs.sha }}
+          path: tmp/sdk-contract
+          token: ${{ secrets.SYNC_TOKEN }}
+      - name: Verify package source, unchanged recipes and current consumers
+        run: python3 Scripts/verify_current_sdk.py --sdk-source tmp/sdk-contract

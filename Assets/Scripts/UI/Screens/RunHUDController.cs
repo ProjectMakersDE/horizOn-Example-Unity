@@ -31,12 +31,6 @@ namespace SeagullStorm
         {
             if (GameManager.Instance == null) return;
 
-            if (Input.GetKeyDown(KeyCode.Escape) && GameManager.Instance.CurrentState == GameState.Run)
-            {
-                GameManager.Instance.ChangeState(GameState.Paused);
-                return;
-            }
-
             var run = GameManager.Instance.RunState;
 
             if (waveText != null) waveText.text = $"Wave {run.wave}";
