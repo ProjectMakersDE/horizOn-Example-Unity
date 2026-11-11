@@ -26,6 +26,9 @@ jobs:
     steps:
       - name: Checkout example project
         uses: actions/checkout@v4
+        with:
+          # SDK updates land on develop first and reach release with the next develop -> release merge.
+          ref: develop
 
       - name: Resolve SDK release
         id: sdk
