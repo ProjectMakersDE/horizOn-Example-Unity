@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   source-contracts:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, proxmox-ci, horizon-example-ci]
     steps:
       - uses: actions/checkout@v4
 
