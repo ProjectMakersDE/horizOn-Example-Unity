@@ -1,13 +1,13 @@
 {
   "dependencies": {
     "com.projectmakers.horizon": {
-      "version": "https://github.com/ProjectMakersDE/horizOn-SDK-Unity.git#v1.13.0",
+      "version": "https://github.com/ProjectMakersDE/horizOn-SDK-Unity.git#v1.14.0",
       "depth": 0,
       "source": "git",
       "dependencies": {
         "com.unity.ugui": "2.0.0"
       },
-      "hash": "ff17bd71b394e5c94361da6080f3e123d4c2ba5c"
+      "hash": "22dc1aa88830db76920a2840bda70ed6048576dc"
     },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
